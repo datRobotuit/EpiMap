@@ -10,12 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mui/material": "^7.1.1",
+    "ant-design": "^1.0.0",
     "axios": "^1.9.0",
     "bootstrap": "^5.3.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "tailwindcss": "^4.1.8",
+    "ui": "github:shadcn/ui",
     "zustand": "^5.0.5"
   },
   "devDependencies": {
