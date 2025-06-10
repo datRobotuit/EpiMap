@@ -1,8 +1,12 @@
 @import url("https://js.arcgis.com/4.32/@arcgis/core/assets/esri/themes/dark/main.css");
 @import url("https://js.arcgis.com/calcite-components/3.0.3/calcite.css");
 @import url("https://js.arcgis.com/map-components/4.32/arcgis-map-components.css");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
+
+/* :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -68,13 +72,13 @@ button {
 }
 button:hover {
   border-color: #ffffff;
-}
+} */
 /* button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 } */
 
-@media (prefers-color-scheme: light) {
+/* @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
     background-color: #ffffff;
@@ -85,4 +89,4 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
-}
+} */
