@@ -195,7 +195,7 @@ const MapComponent = () => {
     return (
         <div className="relative">
             {/* Debug information panel */}
-            <div className="absolute top-20 right-6 z-20 bg-white p-4 rounded-lg shadow-lg max-w-xs opacity-80 hover:opacity-100 transition-opacity">
+            <div className="absolute top-20 left-10 z-20 bg-white p-4 rounded-lg shadow-lg max-w-xs opacity-80 hover:opacity-100 transition-opacity">
                 <h3 className="font-bold text-sm mb-2">Debug Info</h3>
                 <p className="text-xs mb-1">Region: {region}</p>
                 <p className="text-xs mb-1">Map Status: {viewRef.current ? "Loaded" : "Not Loaded"}</p>
