@@ -1,21 +1,20 @@
-import "@arcgis/map-components/components/arcgis-layer-list";
-import "@arcgis/map-components/dist/components/arcgis-basemap-toggle";
-import "@arcgis/map-components/dist/components/arcgis-locate";
-import "@arcgis/map-components/dist/components/arcgis-map";
-import "@arcgis/map-components/dist/components/arcgis-scale-bar";
-import "@arcgis/map-components/dist/components/arcgis-zoom";
-import "@esri/calcite-components/components/calcite-navigation";
-import "@esri/calcite-components/components/calcite-navigation-logo";
-import "@esri/calcite-components/components/calcite-shell";
+import { useState } from "react";
+import DashboardPanel from "../components/DashboardPanel";
+import DashboardToggleButton from "../components/DashboardToggleButton";
 import MapComponent from "../components/MapComponent";
-import SceneView from "@arcgis/core/views/SceneView";
+
 export default function Homepage() {
+    const [dashboardOpen, setDashboardOpen] = useState(true);
+
+    const toggleDashboard = () => {
+        setDashboardOpen(!dashboardOpen);
+    };
 
     return (
-        <div>
+        <div className="relative min-h-screen bg-gray-100">
             <MapComponent />
-            
-
+            <DashboardPanel isOpen={dashboardOpen} onToggle={toggleDashboard} />
+            <DashboardToggleButton isOpen={dashboardOpen} onToggle={toggleDashboard} />
         </div>
     );
 }
