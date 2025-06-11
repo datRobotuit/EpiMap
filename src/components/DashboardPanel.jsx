@@ -1,331 +1,196 @@
-import { Bar, Column, Line, Pie } from '@ant-design/charts';
-import { Card, Tabs, Typography } from 'antd';
+import { Select, Tabs, Typography } from 'antd';
 import { useState } from "react";
-import { dailyCases, demographics, nationalStats, provincesData } from "../utils/province-stats";
-
+import { dailyCases, nationalStats } from '../utils/province-stats';
+import renderColumnChart from './Dashboard/renderColumnChart';
+import renderDemographicsTab from './Dashboard/renderDemographicsTab';
+import renderProvincesTab from './Dashboard/renderProvinceTab';
+import renderLineChart from './Dashboard/renderLineChart';
 const { Title, Text } = Typography;
 
 const DashboardPanel = ({ isOpen, onToggle }) => {
     const [activeTab, setActiveTab] = useState("overview");
+    const [diseaseFilter, setDiseaseFilter] = useState("all");
 
-    // Ant Design Charts - Bar Chart
-    const renderBarChart = (data, xField, yField, title, colors) => {
-        const config = {
-            data,
-            xField: yField,
-            yField: xField,
-            seriesField: xField,
-            legend: {
-                position: 'top-left',
-            },
-            color: colors,
-            label: {
-                position: 'right',
-                style: {
-                    fill: '#333',
-                },
-            },
-            xAxis: {
-                title: {
-                    text: title,
-                },
-            },
-            tooltip: {
-                formatter: (datum) => {
-                    return { name: datum[xField], value: datum[yField] };
-                },
-            },
-            height: 200,
-            autoFit: true,
-        };
-
-        return <Bar {...config} />;
-    };
-
-    // Ant Design Charts - Column Chart
-    const renderColumnChart = (data, xField, yField, title, colors) => {
-        const config = {
-            data,
-            xField,
-            yField,
-            seriesField: xField,
-            color: colors,
-            label: {
-                position: 'top',
-                style: {
-                    fill: '#333',
-                },
-            },
-            xAxis: {
-                label: {
-                    autoRotate: true,
-                    autoHide: false,
-                    autoEllipsis: false,
-                },
-                title: {
-                    text: title,
-                },
-            },
-            height: 200,
-            autoFit: true,
-        };
-
-        return <Column {...config} />;
-    };
-
-    // Ant Design Charts - Pie Chart
-    const renderPieChart = (data, angleField, colorField, title, colors) => {
-        const config = {
-            data,
-            angleField,
-            colorField,
-            color: colors,
-            radius: 0.8,
-            label: {
-                type: 'outer',
-                content: '{name}: {percentage}',
-            },
-            tooltip: {
-                formatter: (datum) => {
-                    return { name: datum[colorField], value: datum[angleField] };
-                },
-            },
-            interactions: [
-                {
-                    type: 'element-active',
-                },
-            ],
-            height: 200,
-            autoFit: true,
-            legend: {
-                layout: 'horizontal',
-                position: 'bottom',
-            },
-        };
-
-        return (
-            <Card title={title} size="small">
-                <Pie {...config} />
-            </Card>
-        );
-    };
-
-    // Ant Design Charts - Line Chart
-    const renderLineChart = (data, xField, yField, title) => {
-        const config = {
-            data,
-            xField,
-            yField,
-            point: {
-                size: 5,
-                shape: 'circle',
-            },
-            color: '#3b82f6',
-            lineStyle: {
-                lineWidth: 3,
-            },
-            tooltip: {
-                formatter: (datum) => {
-                    return { name: 'Số ca', value: datum[yField] };
-                },
-            },
-            xAxis: {
-                title: {
-                    text: 'Ngày',
-                },
-                tickCount: 5,
-            },
-            yAxis: {
-                title: {
-                    text: 'Số ca',
-                },
-            },
-            height: 250,
-            autoFit: true,
-        };
-
-        return (
-            <Card title={title} size="small">
-                <Line {...config} />
-            </Card>
-        );
-    };
+    // Options for disease filter
+    const diseaseOptions = [
+        { value: "all", label: "Tất cả" },
+        { value: "covid19", label: "COVID-19" },
+        { value: "dengue", label: "Sốt xuất huyết" },
+        { value: "influenza", label: "Cúm mùa" },
+    ];
 
     const renderOverviewTab = () => {
+
+        let filteredStats = { ...nationalStats };
+        let filteredDailyCases = [...dailyCases];
+
+        // Options for disease filter
+
+        // Simulating different data for different disease types
+        if (diseaseFilter !== "all") {
+            // Modify the stats based on the selected disease
+            const multiplier = {
+                "covid19": 0.2,  // Using the current data for COVID-19
+                "dengue": 0.5,   // 60% of COVID-19 cases for Dengue
+                "influenza": 0.3 // 80% of COVID-19 cases for Influenza
+            }[diseaseFilter] || 1.0;
+
+            filteredStats = {
+                ...nationalStats,
+                totalCases: Math.floor(nationalStats.totalCases * multiplier),
+                activeCases: Math.floor(nationalStats.activeCases * multiplier),
+                recovered: Math.floor(nationalStats.recovered * multiplier),
+                deaths: Math.floor(nationalStats.deaths * multiplier),
+                vaccinated: {
+                    firstDose: nationalStats.vaccinated.firstDose * multiplier,
+                    secondDose: nationalStats.vaccinated.secondDose * multiplier,
+                    booster: nationalStats.vaccinated.booster * multiplier,
+                }
+            };
+
+            // Modify the daily cases data
+            filteredDailyCases = dailyCases.map(day => ({
+                ...day,
+                cases: Math.floor(day.cases * multiplier)
+            }));
+        }
+
         // Format data for charts
-        const dailyCasesData = dailyCases.map(d => ({
+        const dailyCasesData = filteredDailyCases.map(d => ({
             date: d.date.substring(5), // Only show MM-DD
             cases: d.cases
         }));
 
         const vaccinationData = [
-            { category: "Mũi 1", value: nationalStats.vaccinated.firstDose / 1000000 },
-            { category: "Mũi 2", value: nationalStats.vaccinated.secondDose / 1000000 },
-            { category: "Mũi bổ sung", value: nationalStats.vaccinated.booster / 1000000 }
+            { category: "Mũi 1", value: filteredStats.vaccinated.firstDose / 1000000 },
+            { category: "Mũi 2", value: filteredStats.vaccinated.secondDose / 1000000 },
+            { category: "Mũi bổ sung", value: filteredStats.vaccinated.booster / 1000000 }
         ];
 
+        const selectedDiseaseName = diseaseFilter !== "all"
+            ? diseaseOptions.find(opt => opt.value === diseaseFilter)?.label
+            : null;
+
         return (
-            <div className="top-0 left-0 p-4">
-                <Title level={4}>Tổng quan dịch bệnh</Title>
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-blue-100 p-3 rounded-md">
-                        <Text type="secondary" className="text-xs text-blue-800">Tổng ca nhiễm</Text>
-                        <p className="text-xl font-bold text-blue-600">{nationalStats.totalCases.toLocaleString()}</p>
+            <div className="p-5">
+                <div className="flex justify-between items-center mb-5">
+                    <div>
+                        <Title level={4} style={{ margin: 0 }}>Tổng quan dịch bệnh</Title>
+                        {selectedDiseaseName && (
+                            <span className="text-sm text-blue-500 font-medium">
+                                Đang xem: {selectedDiseaseName}
+                            </span>
+                        )}
                     </div>
-                    <div className="bg-orange-100 p-3 rounded-md">
-                        <Text type="secondary" className="text-xs text-orange-800">Ca đang điều trị</Text>
-                        <p className="text-xl font-bold text-orange-600">{nationalStats.activeCases.toLocaleString()}</p>
+                    <Select
+                        value={diseaseFilter}
+                        onChange={setDiseaseFilter}
+                        options={diseaseOptions}
+                        style={{ width: 160 }}
+                        placeholder="Chọn loại bệnh"
+                        dropdownStyle={{ borderRadius: '8px' }}
+                        className="hover:shadow-md transition-shadow"
+                    />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-blue-200">
+                        <div className="flex justify-between">
+                            <Text className="text-xs text-blue-700 font-medium">Tổng ca nhiễm</Text>
+                            <div className="bg-blue-500 p-1 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p className="text-xl font-bold text-blue-600 mt-1">{filteredStats.totalCases.toLocaleString()}</p>
                     </div>
-                    <div className="bg-green-100 p-3 rounded-md">
-                        <Text type="secondary" className="text-xs text-green-800">Khỏi bệnh</Text>
-                        <p className="text-xl font-bold text-green-600">{nationalStats.recovered.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-orange-200">
+                        <div className="flex justify-between">
+                            <Text className="text-xs text-orange-700 font-medium">Ca đang điều trị</Text>
+                            <div className="bg-orange-500 p-1 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h12M8 17h12M3 7l1 1M3 12l1 1M3 17l1 1" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p className="text-xl font-bold text-orange-600 mt-1">{filteredStats.activeCases.toLocaleString()}</p>
                     </div>
-                    <div className="bg-red-100 p-3 rounded-md">
-                        <Text type="secondary" className="text-xs text-red-800">Tử vong</Text>
-                        <p className="text-xl font-bold text-red-600">{nationalStats.deaths.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-green-200">
+                        <div className="flex justify-between">
+                            <Text className="text-xs text-green-700 font-medium">Khỏi bệnh</Text>
+                            <div className="bg-green-500 p-1 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p className="text-xl font-bold text-green-600 mt-1">{filteredStats.recovered.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-red-200">
+                        <div className="flex justify-between">
+                            <Text className="text-xs text-red-700 font-medium">Tử vong</Text>
+                            <div className="bg-red-500 p-1 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p className="text-xl font-bold text-red-600 mt-1">{filteredStats.deaths.toLocaleString()}</p>
                     </div>
                 </div>
 
-                <div className="mb-6">
-                    <Title level={5}>Số ca nhiễm theo ngày</Title>
-                    {renderLineChart(dailyCasesData, 'date', 'cases', 'Số ca nhiễm theo ngày')}
+                <div className="mb-6 bg-white/70 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100">
+                    <div className="flex items-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                        </svg>
+                        <Title level={5} style={{ margin: 0 }}>Số ca nhiễm theo ngày {selectedDiseaseName && `- ${selectedDiseaseName}`}</Title>
+                    </div>
+                    <div className="bg-white rounded-lg overflow-hidden">
+                        {renderLineChart(dailyCasesData, 'date', 'cases', 'Diễn biến ca nhiễm')}
+                    </div>
                 </div>
 
-                <div className="mb-6">
-                    <Title level={5}>Tình trạng tiêm chủng</Title>
-                    {renderColumnChart(
-                        vaccinationData,
-                        'category',
-                        'value',
-                        'Tình trạng tiêm chủng (triệu người)',
-                        ['#3b82f6', '#10b981', '#6366f1']
-                    )}
+                <div className="mb-6 bg-white/70 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100">
+                    <div className="flex items-center mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                        </svg>
+                        <Title level={5} style={{ margin: 0 }}>Tình trạng tiêm chủng {selectedDiseaseName && `- ${selectedDiseaseName}`}</Title>
+                    </div>
+                    <div className="bg-white rounded-lg overflow-hidden">
+                        {renderColumnChart(
+                            vaccinationData,
+                            'category',
+                            'value',
+                            'Tình trạng tiêm chủng (triệu người)',
+                            ['#3b82f6', '#10b981', '#6366f1']
+                        )}
+                    </div>
                 </div>
             </div>
         );
     };
-
-    const renderProvincesTab = () => {
-        // Format data for charts
-        const top5Provinces = provincesData.slice(0, 5);
-
-        const provinceCasesData = top5Provinces.map(province => ({
-            province: province.province,
-            cases: province.cases
-        }));
-
-        const provinceActiveData = top5Provinces.map(province => ({
-            province: province.province,
-            active: province.active
-        }));
-
-        return (
-            <div className="p-4">
-                <Title level={4}>Theo tỉnh/thành phố</Title>
-
-                <div className="mb-6">
-                    <Title level={5}>Các tỉnh có số ca nhiễm cao nhất</Title>
-                    {renderColumnChart(
-                        provinceCasesData,
-                        'province',
-                        'cases',
-                        'Số ca nhiễm theo tỉnh/thành',
-                        ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef']
-                    )}
-                </div>
-
-                <div className="mb-6">
-                    <Title level={5}>Tỷ lệ ca đang điều trị</Title>
-                    {renderPieChart(
-                        provinceActiveData,
-                        'active',
-                        'province',
-                        'Tỷ lệ ca đang điều trị',
-                        ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef']
-                    )}
-                </div>
-
-                <div className="overflow-auto max-h-64 mt-6">
-                    <table className="min-w-full bg-white">
-                        <thead className="bg-gray-100">
-                            <tr>
-                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tỉnh/Thành</th>
-                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ca nhiễm</th>
-                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đang điều trị</th>
-                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khỏi bệnh</th>
-                                <th className="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tử vong</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {provincesData.map((province, index) => (
-                                <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                                    <td className="py-2 px-3 text-sm font-medium text-gray-900">{province.province}</td>
-                                    <td className="py-2 px-3 text-sm text-gray-500">{province.cases}</td>
-                                    <td className="py-2 px-3 text-sm text-orange-500">{province.active}</td>
-                                    <td className="py-2 px-3 text-sm text-green-500">{province.recovered}</td>
-                                    <td className="py-2 px-3 text-sm text-red-500">{province.deaths}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    };
-
-    const renderDemographicsTab = () => {
-        // Format data for charts
-        const ageData = Object.entries(demographics.age).map(([range, count]) => ({
-            range,
-            count
-        }));
-
-        const genderData = Object.entries(demographics.gender).map(([gender, count]) => ({
-            gender: gender === 'male' ? 'Nam' : 'Nữ',
-            count
-        }));
-
-        return (
-            <div className="p-4">
-                <Title level={4}>Thống kê nhân khẩu học</Title>
-
-                <div className="mb-6">
-                    <Title level={5}>Phân bố theo độ tuổi</Title>
-                    {renderBarChart(
-                        ageData,
-                        'range',
-                        'count',
-                        'Số ca nhiễm theo độ tuổi',
-                        ['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef']
-                    )}
-                </div>
-
-                <div className="mb-6">
-                    <Title level={5}>Phân bố theo giới tính</Title>
-                    {renderPieChart(
-                        genderData,
-                        'count',
-                        'gender',
-                        'Phân bố theo giới tính',
-                        ['#3b82f6', '#ec4899']
-                    )}
-                </div>
-            </div>
-        );
-    };
-
     return (
         <div
-            className={`fixed top-0 left-0 h-full bg-black w-1/4 z-10 transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
-                }`}
+            className={`fixed top-0 right-0 h-[90vh] mt-10 w-[30%] z-10 mr-2 transition-transform duration-300 ease-in-out backdrop-blur-md bg-white/80 shadow-xl border-l border-white/20 rounded-l-xl ${isOpen ? "translate-x-0" : "translate-x-full"}`}
         >
-            <div className="flex justify-between items-center p-4 border-b">
-                <Title level={3} style={{ margin: 0 }}>Dịch bệnh Việt Nam</Title>
+            <div className="flex justify-between items-center p-4 border-b border-white/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+                <div className="flex items-center">
+                    <div className="w-8 h-8 mr-2 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <Title level={3} style={{ margin: 0 }}>Dịch bệnh Việt Nam</Title>
+                </div>
                 <button
                     onClick={onToggle}
-                    className="p-1 rounded-full hover:bg-gray-200"
+                    className="p-2 rounded-full hover:bg-white/30 transition-all hover:rotate-90 duration-300"
+                    title="Đóng bảng điều khiển"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
@@ -334,35 +199,59 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
             <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
-                className="mx-2 mt-2"
+                className="mx-3 mt-3"
+                type="card"
+                animated={true}
                 items={[
                     {
                         key: 'overview',
-                        label: 'Tổng quan',
+                        label: (
+                            <span className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                Tổng quan
+                            </span>
+                        ),
                         children: <></>
                     },
                     {
                         key: 'provinces',
-                        label: 'Theo tỉnh',
+                        label: (
+                            <span className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Theo tỉnh
+                            </span>
+                        ),
                         children: <></>
                     },
                     {
                         key: 'demographics',
-                        label: 'Nhân khẩu',
+                        label: (
+                            <span className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Nhân khẩu
+                            </span>
+                        ),
                         children: <></>
                     }
                 ]}
             />
 
-            <div className="overflow-y-auto" style={{ height: "calc(100% - 110px)" }}>
+            <div className="overflow-y-auto scrollbar-thin mb-5 scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ height: "calc(100% - 140px)" }}>
                 {activeTab === "overview" && renderOverviewTab()}
                 {activeTab === "provinces" && renderProvincesTab()}
                 {activeTab === "demographics" && renderDemographicsTab()}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-3 text-center text-xs text-gray-500 border-t bg-gray-50">
-                <p>Dữ liệu mẫu - Dành cho mục đích hiển thị</p>
-                <p className="mt-1">Dữ liệu thực sẽ được cập nhật từ API</p>
+            <div className="absolute bottom-0 left-0 right-0 p-3 text-center text-xs text-gray-500 border-t border-white/30 bg-white/50 backdrop-blur-sm">
+                <p>Dữ liệu mẫu - Cập nhật lần cuối: 11/06/2025</p>
+                <p className="mt-1 text-blue-500 hover:underline cursor-pointer">Xem nguồn dữ liệu</p>
             </div>
         </div>
     );

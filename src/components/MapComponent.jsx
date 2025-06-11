@@ -24,7 +24,7 @@ const MapComponent = () => {
              * Initialize application
              */
             const webmap = new Map({
-                basemap: "dark-gray-vector" // Basemap layer service
+                basemap: "satellite" // Basemap layer service
             });
 
             // Create a graphics layer for highlighting provinces
