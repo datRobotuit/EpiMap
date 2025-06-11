@@ -1,5 +1,5 @@
+import EpidemiologyEndpoints from "../services/endpoints/epidemiology.endpoints";
 import { api } from "~/services/api";
-import EpidemiologyEndpoints from "~/services/epidemiology.endpoints";
 
 class EpidemiologyApi {
   async getPatients(params) {

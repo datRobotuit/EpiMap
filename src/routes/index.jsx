@@ -1,5 +1,6 @@
 export const routes = {
-    404: '/404',
-    HOME: '/',
-    LOGIN: '/login',
-}
+  404: "/404",
+  HOME: "/",
+  LOGIN: "/login",
+  EPIDEMIOLOGY: "/epidemiology",
+};
