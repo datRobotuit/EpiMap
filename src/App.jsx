@@ -6,6 +6,7 @@ import Homepage from './pages/Homepage'
 import Login from './pages/LogIn/Login'
 import { routes } from './routes'
 import AdminLayout from './layouts/AdminLayout'
+import AdminHomepage from './pages/Admin/Homepage'
 function App() {
   return (
     <Routes>
@@ -14,7 +15,8 @@ function App() {
       <Route path={routes.LOGIN} element={<Login />} />
       <Route path="*" element={<NotFound />} />
       <Route element={<AdminLayout/>}>
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path={routes.ADMINHOME} element={<AdminHomepage/>} />
+        <Route path={routes.ADMINREPORT} element={<AdminDashboard />} />
       </Route>
     </Routes>
   )

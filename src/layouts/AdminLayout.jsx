@@ -9,9 +9,9 @@ const AdminLayout = () => {
     };
 
     return (
-        <div className="flex ">
+        <div className="flex min-h-screen w-full">
             <AdminSidebar />
-            <main>
+            <main className="flex-1 min-h-screen w-full bg-white">
                 <Outlet />
             </main>
         </div>

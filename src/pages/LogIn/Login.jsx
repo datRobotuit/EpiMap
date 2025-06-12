@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { login } from "../../services/loginService";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -14,7 +16,9 @@ export default function Login() {
         const res = await login(username, password);
         setLoading(false);
         if (res.success) {
+            // Không cần lưu token vào localStorage nếu backend dùng cookie
             alert("Đăng nhập thành công!");
+            navigate("/admin");
         } else {
             setError(res.msg || "Đăng nhập thất bại");
         }
