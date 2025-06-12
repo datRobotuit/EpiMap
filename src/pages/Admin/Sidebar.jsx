@@ -1,41 +1,133 @@
 import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+
+const navItems = [
+  {
+    label: "Trang chủ",
+    route: "/admin/home", // ADMINHOME
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        viewBox="0 0 24 24"
+      >
+        <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6" />
+      </svg>
+    ),
+    isActive: true,
+  },
+  {
+    label: "Thống kê dịch tễ học",
+    route: "/admin/epidemiology", // EPIDEMIOLOGY
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        viewBox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    ),
+  },
+  {
+    label: "Báo cáo",
+    route: "/admin/report", // ADMINREPORT
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        viewBox="0 0 24 24"
+      >
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+    ),
+  },
+];
 
 export default function AdminSidebar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   return (
-    <aside style={{ width: 260, background: '#fff', boxShadow: '2px 0 8px #0001', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <aside
+      className="flex flex-col justify-between h-screen bg-white shadow-lg"
+      style={{ width: 260 }}
+    >
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', padding: 24, borderBottom: '1px solid #eee' }}>
-          <img src="/vite.svg" alt="EpiMap" style={{ width: 36, height: 36, marginRight: 12 }} />
-          <span style={{ fontWeight: 700, fontSize: 20, color: '#1976d2', letterSpacing: 1 }}>EPIMAP</span>
+        <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-100">
+          <img src="/vite.svg" alt="EpiMap" className="w-9 h-9" />
+          <span
+            className="font-extrabold text-xl text-primary tracking-wide"
+            style={{ color: "#1976d2" }}
+          >
+            EPIMAP
+          </span>
         </div>
-        <nav style={{ marginTop: 32 }}>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            <li style={{ padding: '12px 32px', fontWeight: 600, color: '#1976d2', background: '#f4f6f8', borderRadius: 8, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <svg width="20" height="20" fill="none" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"/></svg>
-              Trang chủ
-            </li>
-            <li style={{ padding: '12px 32px', color: '#333', borderRadius: 8, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <svg width="20" height="20" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              Thống kê dịch tễ học
-            </li>
-            <li style={{ padding: '12px 32px', color: '#333', borderRadius: 8, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <svg width="20" height="20" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              Nhập dữ liệu
-            </li>
-            <li style={{ padding: '12px 32px', color: '#333', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <svg width="20" height="20" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Báo cáo
-            </li>
+        <nav className="mt-8">
+          <ul className="space-y-2 px-2">
+            {navItems.map((item, idx) => {
+              const isActive = location.pathname === item.route;
+              return (
+                <li
+                  key={item.label}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-lg cursor-pointer transition-all group
+                    ${
+                      isActive
+                        ? "bg-gradient-to-r from-blue-100 to-blue-50 text-primary font-bold shadow"
+                        : "text-gray-700 hover:bg-blue-50 hover:text-primary"
+                    }`}
+                  style={{
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: 15,
+                    marginBottom: idx === navItems.length - 1 ? 0 : 4,
+                  }}
+                  onClick={() => navigate(item.route)}
+                >
+                  <span
+                    className={`transition-colors ${
+                      isActive
+                        ? "text-primary"
+                        : "text-gray-400 group-hover:text-primary"
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </div>
-      <div style={{ padding: 24, borderTop: '1px solid #eee', display: 'flex', alignItems: 'center' }}>
-        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="avatar" style={{ width: 36, height: 36, borderRadius: '50%', marginRight: 12 }} />
+      {/* <div className="flex items-center gap-3 px-6 py-6 border-t border-gray-100 bg-white/80">
+        <img
+          src="https://randomuser.me/api/portraits/men/32.jpg"
+          alt="avatar"
+          className="w-9 h-9 rounded-full border-2 border-blue-200 shadow"
+        />
         <div>
-          <div style={{ fontWeight: 600, color: '#222' }}>Josh Harris</div>
-          <div style={{ fontSize: 12, color: '#888' }}>josh@protonmail.com</div>
+          <div className="font-semibold text-gray-800">Josh Harris</div>
+          <div className="text-xs text-gray-500">josh@protonmail.com</div>
         </div>
-      </div>
+      </div> */}
     </aside>
   );
 }

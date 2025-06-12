@@ -8,7 +8,7 @@ export default {
         text: ["Montserrat", "sans-serif"],
       },
       colors: {
-        primary: "#A3804A",
+        primary: "#1976d2",
         secondary: "#FFF671",
         button: "#e08cff",
         descText: "#4D4D4D",
