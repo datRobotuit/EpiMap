@@ -11,9 +11,8 @@ export default function Homepage() {
     };
 
     return (
-        <div className="relative min-h-screen bg-gray-100 right-0">
+        <div className="relative min-h-screen bg-gray-100">
             <MapComponent />
-            
             <DashboardPanel isOpen={dashboardOpen} onToggle={toggleDashboard} />
             <DashboardToggleButton isOpen={dashboardOpen} onToggle={toggleDashboard} />
         </div>

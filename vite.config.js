@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
@@ -9,4 +9,6 @@ export default defineConfig({
       '~': path.resolve(__dirname, 'src'),
     },
   },
+  // Ensure JSON files are properly processed
+  assetsInclude: ['**/*.json'],
 })
