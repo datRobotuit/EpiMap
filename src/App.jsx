@@ -3,7 +3,7 @@ import './index.css'
 import NotFound from './pages/404'
 import AdminDashboard from './pages/Admin/Dashboard'
 import Homepage from './pages/Homepage'
-import Login from './pages/LogIn'
+import Login from './pages/LogIn/Login'
 import { routes } from './routes'
 import AdminLayout from './layouts/AdminLayout'
 function App() {
