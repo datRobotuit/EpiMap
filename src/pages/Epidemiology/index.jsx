@@ -1,4 +1,6 @@
 import epidemiologyApi from "../../apis/epidemiologyApi";
+import AddPatientModal from "./_components/AddPatientModal";
+import UpdatePatientModal from "./_components/UpdatePatientModal";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -47,6 +49,8 @@ export default function Epidemiology() {
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingPatient, setEditingPatient] = useState(null);
 
   // Lấy danh sách bệnh nhân
   const fetchPatients = async () => {
@@ -69,7 +73,6 @@ export default function Epidemiology() {
 
   useEffect(() => {
     fetchPatients();
-    // eslint-disable-next-line
   }, [page, search, caseType]);
 
   // Thêm bệnh nhân mới
@@ -78,6 +81,7 @@ export default function Epidemiology() {
     try {
       await epidemiologyApi.addPatient(patientData);
       fetchPatients();
+      setIsAddModalOpen(false);
     } catch (err) {
       alert(err.message);
     }
@@ -85,11 +89,14 @@ export default function Epidemiology() {
   };
 
   // Xóa các bệnh nhân đã chọn
-  const handleDeletePatients = async () => {
-    if (selectedRows.length === 0) return;
+  const handleDeletePatients = async (ids) => {
+    const deleteIds = ids || selectedRows;
+    if (deleteIds.length === 0) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa các bệnh nhân đã chọn?"))
+      return;
     setLoading(true);
     try {
-      await epidemiologyApi.deletePatientsByIds(selectedRows);
+      await epidemiologyApi.deletePatientsByIds(deleteIds);
       setSelectedRows([]);
       fetchPatients();
     } catch (err) {
@@ -104,6 +111,7 @@ export default function Epidemiology() {
     try {
       await epidemiologyApi.updatePatient(patientId, patientData);
       fetchPatients();
+      setEditingPatient(null);
     } catch (err) {
       alert(err.message);
     }
@@ -125,7 +133,7 @@ export default function Epidemiology() {
   };
 
   return (
-    <div className="w-[1200px] mx-auto px-0 flex flex-col gap-6 py-8 font-text">
+    <div className="w-[1200px] h-screen mx-auto px-0 flex flex-col gap-6 py-5 font-text">
       {/* Header */}
       <div className="w-full flex flex-row justify-between items-center gap-2 mb-1">
         <div className="flex gap-2 items-center w-[700px]">
@@ -157,7 +165,7 @@ export default function Epidemiology() {
             <Input
               disableUnderline
               className="flex-1 text-xs font-medium text-neutral-700 bg-transparent"
-              placeholder="Tìm kiếm theo tên hoặc ID..."
+              placeholder="Tìm kiếm theo họ tên..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -170,6 +178,7 @@ export default function Epidemiology() {
           variant="contained"
           className="bg-primary-gradient rounded-lg text-xs font-bold py-2 px-6 shadow-lg transition-transform"
           startIcon={<AddIcon className="text-white" fontSize="small" />}
+          onClick={() => setIsAddModalOpen(true)}
         >
           Thêm ca mới
         </Button>
@@ -271,7 +280,7 @@ export default function Epidemiology() {
                           size="small"
                           color="primary"
                           className="hover:bg-blue-100"
-                          onClick={() => alert(`Chỉnh sửa ca: ${row.Patient}`)}
+                          onClick={() => setEditingPatient(row)}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -281,7 +290,7 @@ export default function Epidemiology() {
                           size="small"
                           color="error"
                           className="hover:bg-red-100"
-                          onClick={() => alert(`Xóa ca: ${row.Patient}`)}
+                          onClick={() => handleDeletePatients([row._id])}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -307,6 +316,7 @@ export default function Epidemiology() {
           }`}
           disabled={selectedRows.length === 0}
           startIcon={<DeleteIcon className="text-white" fontSize="small" />}
+          onClick={() => handleDeletePatients()}
         >
           Xóa
         </Button>
@@ -322,6 +332,25 @@ export default function Epidemiology() {
           className="flex gap-2"
         />
       </div>
+
+      {/* Modal thêm bệnh nhân */}
+      <AddPatientModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={fetchPatients}
+        onSubmit={handleAddPatient}
+      />
+
+      {/* Modal chỉnh sửa bệnh nhân */}
+      {editingPatient && (
+        <UpdatePatientModal
+          isOpen={!!editingPatient}
+          onClose={() => setEditingPatient(null)}
+          onSuccess={fetchPatients}
+          onSubmit={(data) => handleUpdatePatient(editingPatient._id, data)}
+          initialData={editingPatient}
+        />
+      )}
     </div>
   );
 }

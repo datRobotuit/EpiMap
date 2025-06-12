@@ -5,7 +5,6 @@ class EpidemiologyApi {
   async getPatients(params) {
     try {
       const res = await api.get(EpidemiologyEndpoints.getPatients, { params });
-      // Trả về đúng cấu trúc backend
       return {
         data: res.data.data,
         totalPages: res.data.totalPages,
@@ -46,7 +45,7 @@ class EpidemiologyApi {
 
   async updatePatient(patientId, patientData) {
     try {
-      const res = await api.put(
+      const res = await api.patch(
         `${EpidemiologyEndpoints.updatePatient}?patientId=${patientId}`,
         patientData
       );
