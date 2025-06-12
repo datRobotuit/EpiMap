@@ -1,7 +1,8 @@
 // MapComponent.js
 
-import Graphic from "@arcgis/core/Graphic"; // Add missing Graphic import
+import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import LabelClass from "@arcgis/core/layers/support/LabelClass";
 import Map from "@arcgis/core/Map";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
@@ -11,119 +12,28 @@ import { useEffect, useRef, useState } from "react";
 const MapComponent = () => {
     const mapDiv = useRef(null);
     const viewRef = useRef(null);
-    const [selectedProvince, setSelectedProvince] = useState(null);
-    const [infoPosition, setInfoPosition] = useState(null);
+    const polygonsLayerRef = useRef(null);
     const [mapError, setMapError] = useState(null);
-    // Create graphics layer ref to maintain it between renders
-    const polygonsLayerRef = useRef(new GraphicsLayer({ id: "provincesLayer" }));
-    const [region, setRegion] = useState("Cả nước");
-
     // Add new state variables
     const [is3D, setIs3D] = useState(false);
-    const [currentBasemap, setCurrentBasemap] = useState("satellite");
+    const [currentBasemap, setCurrentBasemap] = useState("topo");
+    const [showLabels, setShowLabels] = useState(false);
 
     // Available basemaps
-    const basemaps = ["satellite", "streets", "hybrid", "topo-vector", "gray-vector"];
+    const basemaps = ["dark-gray", "dark-gray-3d", "dark-gray-vector", "gray", "gray-3d", "gray-vector", "hybrid", "navigation-3d", "navigation-dark-3d", "oceans", "osm", "osm-3d", "satellite", "streets", "streets-3d", "streets-dark-3d", "streets-navigation-vector", "streets-night-vector", "streets-relief-vector", "streets-vector", "terrain", "topo", "topo-3d", "topo-vector"];
+
 
     // Function to toggle between 2D and 3D views
     const toggleViewMode = () => {
         setIs3D(prev => !prev);
     };
 
-    // vẽ đa giác tỉnh
-    const drawProvince = (data, currentRegion) => {
-        console.log("Drawing province:", data.title, "Region:", data.region, "Current filter:", currentRegion);
-
-        try {
-            // Kiểm tra xem data có đầy đủ thông tin cần thiết không
-            if (!data || !data.title) {
-                console.error("Invalid province data:", data);
-                return null;
-            }
-
-            // Kiểm tra xem data.rings có dữ liệu hay không
-            if (!data.rings || !Array.isArray(data.rings) || data.rings.length === 0) {
-                console.error("No rings data for province:", data.title);
-                return null;
-            }
-
-            // Kiểm tra xem tỉnh có thuộc khu vực được chọn không
-            const isInSelectedRegion = data.region === currentRegion || currentRegion === "Cả nước";
-
-            // Thêm transparency cho các tỉnh không thuộc khu vực được chọn
-            const fillColor = isInSelectedRegion
-                ? data.color || [0, 122, 194, 0.5] // Sử dụng màu mặc định nếu không có color
-                : [120, 120, 120, 0.3]; // Màu xám mờ cho các tỉnh không thuộc khu vực
-
-            // Tạo một đối tượng Graphic cho tỉnh
-            const provinceGraphic = new Graphic({
-                geometry: {
-                    type: "polygon",
-                    rings: data.rings,
-                },
-                symbol: {
-                    type: "simple-fill",
-                    color: fillColor,
-                    outline: {
-                        type: "simple-line",
-                        color: isInSelectedRegion ? [255, 255, 255] : [200, 200, 200],
-                        width: isInSelectedRegion ? 1.5 : 0.8, // Đường viền dày hơn cho tỉnh được chọn
-                        style: "dash"
-                    },
-                },
-                attributes: {
-                    ...data,
-                    isSelected: isInSelectedRegion
-                },
-                popupTemplate: isInSelectedRegion ? {
-                    title: "{title}",
-                    content:
-                        "<b>Diện tích:</b> {area} km²<br>" +
-                        "<b>Dân số:</b> {population} người<br>" +
-                        "<b>Mật độ:</b> {population_density} người/km²<br>" +
-                        "<b>Biển số xe:</b> {plate_number}",
-                } : null,
-            });
-
-            return provinceGraphic;
-        } catch (error) {
-            console.error("Error creating graphic for province:", data?.title || "unknown", error);
-            return null;
-        }
+    // Function to change the basemap
+    const changeBasemap = (value) => {
+        setCurrentBasemap(value);
     };
 
 
-    // Function to change basemap
-    const changeBasemap = (basemap) => {
-        setCurrentBasemap(basemap);
-        if (viewRef.current && viewRef.current.map) {
-            viewRef.current.map.basemap = basemap;
-        }
-    };
-
-    useEffect(() => {
-        const fetchProvinceData = async () => {
-            try {
-                const indexRes = await fetch("src/utils/provinces/index.json");
-                const files = await indexRes.json();
-
-                const data = await Promise.all(
-                    files.map((file) =>
-                        fetch(`/polygon/provinces/${file}`).then((res) => res.json())
-                    )
-                );
-
-                data.forEach((provinceData) => {
-                    const provinceShape = drawProvince(provinceData, currentRegion);
-                    polygonsLayer.add(provinceShape); // <- bạn cần định nghĩa sẵn polygonsLayer
-                });
-            } catch (error) {
-                console.error("Lỗi khi tải dữ liệu tỉnh:", error);
-            }
-        };
-
-        fetchProvinceData();
-    }, [region]); 
 
     useEffect(() => {
         if (mapDiv.current) {
@@ -134,12 +44,17 @@ const MapComponent = () => {
                     viewRef.current = null;
                 }
 
+                // Create new map with selected basemap
                 const webmap = new Map({
                     basemap: currentBasemap
                 });
 
-                // Add the provinces layer to the map
-                webmap.add(polygonsLayerRef.current);
+                // Create and add provinces layer
+                const provincesLayer = new GraphicsLayer({
+                    title: "Provinces"
+                });
+                polygonsLayerRef.current = provincesLayer;
+                webmap.add(provincesLayer);
 
                 let view;
 
@@ -170,10 +85,131 @@ const MapComponent = () => {
 
                 viewRef.current = view;
 
-                // Xử lý khi view đã sẵn sàng
-                view.when(() => {
+                // Draw provinces when view is ready
+                view.when(async () => {
                     console.log("Map view is ready");
-                    // Fetch province data after the view is ready
+
+                    // Demo provinces to load
+                    const provincesToLoad = [
+                        "ha_giang.json",
+                        "cao_bang.json",
+                        "lao_cai.json",
+                        "son_la.json",
+                        "lai_chau.json",
+                        "bac_kan.json",
+                        "lang_son.json",
+                        "tuyen_quang.json",
+                        "yen_bai.json",
+                        "thai_nguyen.json",
+                        "dien_bien.json",
+                        "phu_tho.json",
+                        "vinh_phuc.json",
+                        "bac_giang.json",
+                        "bac_ninh.json",
+                        "ha_noi.json",
+                        "quang_ninh.json",
+                        "hai_duong.json",
+                        "hai_phong.json",
+                        "hoa_binh.json",
+                        "hung_yen.json",
+                        "ha_nam.json",
+                        "thai_binh.json",
+                        "nam_dinh.json",
+                        "ninh_binh.json",
+                        "thanh_hoa.json",
+                        "nghe_an.json",
+                        "ha_tinh.json",
+                        "quang_binh.json",
+                        "quang_tri.json",
+                        "thua_thien_hue.json",
+                        "da_nang.json",
+                        "quang_nam.json",
+                        "quang_ngai.json",
+                        "kon_tum.json",
+                        "gia_lai.json",
+                        "binh_dinh.json",
+                        "phu_yen.json",
+                        "dak_lak.json",
+                        "khanh_hoa.json",
+                        "dak_nong.json",
+                        "lam_dong.json",
+                        "ninh_thuan.json",
+                        "binh_phuoc.json",
+                        "tay_ninh.json",
+                        "binh_duong.json",
+                        "dong_nai.json",
+                        "binh_thuan.json",
+                        "ho_chi_minh.json",
+                        "ba_ria_vung_tau.json",
+                        "an_giang.json",
+                        "bac_lieu.json",
+                        "ben_tre.json",
+                        "ca_mau.json",
+                        "can_tho.json",
+                        "dong_thap.json",
+                        "hau_giang.json",
+                        "kien_giang.json",
+                        "long_an.json",
+                        "soc_trang.json",
+                        "tien_giang.json",
+                        "tra_vinh.json",
+                        "vinh_long.json"
+                    ];
+
+                    // Default colors for provinces if not specified in JSON
+                    const defaultColors = [
+                        [216, 108, 114, 0.6], // red
+                        [108, 216, 114, 0.6], // green
+                        [108, 114, 216, 0.6], // blue
+                        [216, 114, 216, 0.6], // purple
+                        [216, 216, 114, 0.6]  // yellow
+                    ];
+
+                    // Load each province file using fetch
+                    for (let i = 0; i < provincesToLoad.length; i++) {
+                        const provinceFile = provincesToLoad[i];
+                        try {
+                            const response = await fetch(`/src/utils/provinces/${provinceFile}`);
+                            if (!response.ok) {
+                                throw new Error(`Failed to load province: ${provinceFile}`);
+                            }
+                            const data = await response.json();
+
+                            // Create polygon geometry
+                            const polygonGeometry = {
+                                type: "polygon",
+                                rings: data.rings,
+                                spatialReference: { wkid: 4326 } // WGS84
+                            };
+
+                            // Create symbol for the polygon
+                            const polygonSymbol = {
+                                type: "simple-fill",
+                                color: data.color || defaultColors[i % defaultColors.length],
+                                outline: {
+                                    color: [255, 255, 255, 0.8],
+                                    width: 1
+                                }
+                            };
+
+                            // Create graphic for the polygon
+                            const polygonGraphic = new Graphic({
+                                geometry: polygonGeometry,
+                                symbol: polygonSymbol,
+                                attributes: {
+                                    title: data.title,
+                                    region: data.region,
+                                    population: data.population
+                                }
+                            });
+
+                            // Add to the layer
+                            provincesLayer.add(polygonGraphic);
+                        } catch (error) {
+                            console.error(`Error loading province ${provinceFile}:`, error);
+                        }
+                    }
+
                 }, (error) => {
                     console.error("Map view failed to load:", error);
                     setMapError("Failed to load map view");
@@ -189,25 +225,11 @@ const MapComponent = () => {
                 setMapError("Failed to initialize map");
             }
         }
-    }, [is3D, currentBasemap]); // Add region as a dependency
+    }, [is3D, currentBasemap, showLabels]); // Add dependencies for map initialization
 
 
     return (
-        <div className="relative">
-            {/* Debug information panel */}
-            <div className="absolute top-20 left-10 z-20 bg-white p-4 rounded-lg shadow-lg max-w-xs opacity-80 hover:opacity-100 transition-opacity">
-                <h3 className="font-bold text-sm mb-2">Debug Info</h3>
-                <p className="text-xs mb-1">Region: {region}</p>
-                <p className="text-xs mb-1">Map Status: {viewRef.current ? "Loaded" : "Not Loaded"}</p>
-                <p className="text-xs mb-1">Graphics Layer: {polygonsLayerRef.current?.graphics?.length || 0} provinces</p>
-                <button
-                    onClick={() => fetchProvinceData(region)}
-                    className="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded"
-                >
-                    Reload Provinces
-                </button>
-            </div>
-
+        <div className="">
             {mapError && (
                 <div className="absolute top-0 left-0 w-full bg-red-500 text-white p-3 z-10 shadow-md flex items-center justify-between">
                     <span className="flex items-center">
@@ -262,29 +284,7 @@ const MapComponent = () => {
                     />
                 </div>
 
-                {/* Add a region selector */}
-                <div className="z-10 bg-white rounded-lg shadow-lg p-1 flex items-center">
-                    <Select
-                        defaultValue={region}
-                        style={{ width: 150, height: 45 }}
-                        onChange={setRegion}
-                        options={[
-                            { value: "Cả nước", label: "Cả nước" },
-                            { value: "Bắc", label: "Miền Bắc" },
-                            { value: "Trung", label: "Miền Trung" },
-                            { value: "Nam", label: "Miền Nam" }
-                        ]}
-                        dropdownStyle={{ zIndex: 2000 }}
-                        suffixIcon={
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                            </svg>
-                        }
-                    />
-                </div>
             </div>
-
-
         </div>
     );
 }
