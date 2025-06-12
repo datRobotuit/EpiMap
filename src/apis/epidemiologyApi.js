@@ -5,18 +5,29 @@ class EpidemiologyApi {
   async getPatients(params) {
     try {
       const res = await api.get(EpidemiologyEndpoints.getPatients, { params });
-      return res.data;
+      // Trả về đúng cấu trúc backend
+      return {
+        data: res.data.data,
+        totalPages: res.data.totalPages,
+        totalRecords: res.data.totalRecords,
+        currentPage: res.data.currentPage,
+      };
     } catch (error) {
-      throw new Error("Có lỗi xảy ra khi lấy danh sách bệnh nhân.");
+      throw new Error(
+        error?.response?.data?.msg ||
+          "Có lỗi xảy ra khi lấy danh sách bệnh nhân."
+      );
     }
   }
 
   async addPatient(patientData) {
     try {
       const res = await api.post(EpidemiologyEndpoints.addPatient, patientData);
-      return res.data;
+      return res.data.data;
     } catch (error) {
-      throw new Error("Có lỗi xảy ra khi thêm bệnh nhân.");
+      throw new Error(
+        error?.response?.data?.msg || "Có lỗi xảy ra khi thêm bệnh nhân."
+      );
     }
   }
 
@@ -27,7 +38,9 @@ class EpidemiologyApi {
       });
       return res.data;
     } catch (error) {
-      throw new Error("Có lỗi xảy ra khi xóa bệnh nhân.");
+      throw new Error(
+        error?.response?.data?.msg || "Có lỗi xảy ra khi xóa bệnh nhân."
+      );
     }
   }
 
@@ -37,9 +50,11 @@ class EpidemiologyApi {
         `${EpidemiologyEndpoints.updatePatient}?patientId=${patientId}`,
         patientData
       );
-      return res.data;
+      return res.data.data;
     } catch (error) {
-      throw new Error("Có lỗi xảy ra khi cập nhật bệnh nhân.");
+      throw new Error(
+        error?.response?.data?.msg || "Có lỗi xảy ra khi cập nhật bệnh nhân."
+      );
     }
   }
 }

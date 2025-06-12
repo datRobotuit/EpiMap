@@ -1,3 +1,4 @@
+import epidemiologyApi from "../../apis/epidemiologyApi";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -13,10 +14,7 @@ import {
   Tooltip,
   CircularProgress,
 } from "@mui/material";
-import { useState, useEffect } from "react";
-import epidemiologyApi from "~/apis/epidemiologyApi";
-
-// Đảm bảo đúng path
+import React, { useEffect, useState } from "react";
 
 const columns = [
   { id: "Patient", label: "Họ tên", minWidth: 120 },
@@ -50,30 +48,74 @@ export default function Epidemiology() {
   const [patients, setPatients] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Gọi API khi page, search, caseType thay đổi
+  // Lấy danh sách bệnh nhân
+  const fetchPatients = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        page,
+        searchValue: search || undefined,
+        medicalCondition: caseType !== "all" ? caseType : undefined,
+      };
+      const res = await epidemiologyApi.getPatients(params);
+      setPatients(res.data);
+      setTotalPages(res.totalPages);
+    } catch (err) {
+      setPatients([]);
+      setTotalPages(1);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchPatients = async () => {
-      setLoading(true);
-      try {
-        const params = {
-          page,
-          searchValue: search || undefined,
-          medicalCondition: caseType !== "all" ? caseType : undefined,
-        };
-        const res = await epidemiologyApi.getPatients(params);
-        setPatients(res.data);
-        setTotalPages(res.totalPages);
-      } catch (err) {
-        setPatients([]);
-        setTotalPages(1);
-      }
-      setLoading(false);
-    };
     fetchPatients();
+    // eslint-disable-next-line
   }, [page, search, caseType]);
 
+  // Thêm bệnh nhân mới
+  const handleAddPatient = async (patientData) => {
+    setLoading(true);
+    try {
+      await epidemiologyApi.addPatient(patientData);
+      fetchPatients();
+    } catch (err) {
+      alert(err.message);
+    }
+    setLoading(false);
+  };
+
+  // Xóa các bệnh nhân đã chọn
+  const handleDeletePatients = async () => {
+    if (selectedRows.length === 0) return;
+    setLoading(true);
+    try {
+      await epidemiologyApi.deletePatientsByIds(selectedRows);
+      setSelectedRows([]);
+      fetchPatients();
+    } catch (err) {
+      alert(err.message);
+    }
+    setLoading(false);
+  };
+
+  // Cập nhật thông tin bệnh nhân
+  const handleUpdatePatient = async (patientId, patientData) => {
+    setLoading(true);
+    try {
+      await epidemiologyApi.updatePatient(patientId, patientData);
+      fetchPatients();
+    } catch (err) {
+      alert(err.message);
+    }
+    setLoading(false);
+  };
+
   const handleSelectAll = (e) => {
-    setSelectedRows(e.target.checked ? patients.map((row) => row._id) : []);
+    if (e.target.checked) {
+      setSelectedRows(patients.map((row) => row._id));
+    } else {
+      setSelectedRows([]);
+    }
   };
 
   const handleSelectRow = (id) => {
