@@ -4,10 +4,12 @@ import Graphic from "@arcgis/core/Graphic";
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import LabelClass from "@arcgis/core/layers/support/LabelClass";
 import Map from "@arcgis/core/Map";
+import PopupTemplate from "@arcgis/core/PopupTemplate";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
 import { Select } from "antd";
 import { useEffect, useRef, useState } from "react";
+import epidemicData from "../utils/mockEpidemicData";
 
 const MapComponent = () => {
     const mapDiv = useRef(null);
@@ -18,6 +20,45 @@ const MapComponent = () => {
     const [is3D, setIs3D] = useState(false);
     const [currentBasemap, setCurrentBasemap] = useState("topo");
     const [showLabels, setShowLabels] = useState(false);
+    const [selectedDataType, setSelectedDataType] = useState("totalCases");
+    const [selectedDisease, setSelectedDisease] = useState("all");
+
+    // Loại dữ liệu có thể hiển thị
+    const dataTypes = [
+        { value: "totalCases", label: "Tổng số ca" },
+        { value: "activeCases", label: "Ca đang điều trị" },
+        { value: "newCases", label: "Ca mới trong ngày" },
+        { value: "vaccinationRate", label: "Tỷ lệ tiêm chủng (%)" }
+    ];
+
+    // Danh sách loại bệnh từ dữ liệu mô phỏng
+    const diseaseTypes = [
+        { value: "all", label: "Tất cả bệnh", color: [100, 100, 100, 0.7] },
+        ...(epidemicData.diseaseTypes || []).map(disease => ({
+            value: disease.id,
+            label: disease.name,
+            color: disease.color
+        }))
+    ];
+
+    // Format the disease options with color indicators
+    const diseaseOptions = diseaseTypes.map(disease => ({
+        value: disease.value,
+        label: (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div
+                    style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: `rgba(${disease.color[0]}, ${disease.color[1]}, ${disease.color[2]}, ${disease.color[3]})`,
+                        marginRight: '8px'
+                    }}
+                />
+                {disease.label}
+            </div>
+        ),
+    }));
 
     // Available basemaps
     const basemaps = ["dark-gray", "dark-gray-3d", "dark-gray-vector", "gray", "gray-3d", "gray-vector", "hybrid", "navigation-3d", "navigation-dark-3d", "oceans", "osm", "osm-3d", "satellite", "streets", "streets-3d", "streets-dark-3d", "streets-navigation-vector", "streets-night-vector", "streets-relief-vector", "streets-vector", "terrain", "topo", "topo-3d", "topo-vector"];
@@ -31,6 +72,103 @@ const MapComponent = () => {
     // Function to change the basemap
     const changeBasemap = (value) => {
         setCurrentBasemap(value);
+    };
+
+    // Function to toggle province labels
+    const toggleLabels = (showLabels) => {
+        setShowLabels(showLabels);
+        if (polygonsLayerRef.current) {
+            if (showLabels) {
+                // Create a label class for the province names
+                const labelClass = new LabelClass({
+                    symbol: {
+                        type: "text",
+                        color: "white",
+                        haloColor: "black",
+                        haloSize: 1,
+                        font: {
+                            family: "sans-serif",
+                            size: 12,
+                            weight: "bold"
+                        }
+                    },
+                    labelExpressionInfo: {
+                        expression: "$feature.title"
+                    },
+                    labelPlacement: "center-center"
+                });
+
+                // Apply label class to graphics layer
+                polygonsLayerRef.current.labelingInfo = [labelClass];
+            } else {
+                // Remove labels
+                polygonsLayerRef.current.labelingInfo = null;
+            }
+        }
+    };
+
+    // Chuyển đổi giữa các kiểu dữ liệu hiển thị
+    const changeDataType = (value) => {
+        setSelectedDataType(value);
+    };
+
+    // Thay đổi loại bệnh hiển thị
+    const changeDisease = (value) => {
+        setSelectedDisease(value);
+    };
+
+    // Tính màu sắc dựa trên số ca bệnh
+    const getColorByValue = (value, dataType) => {
+        // Các ngưỡng và màu sắc cho từng loại dữ liệu
+        const thresholds = {
+            totalCases: [100, 500, 1000, 3000, 5000],
+            activeCases: [50, 200, 500, 1000, 2000],
+            newCases: [10, 50, 100, 200, 500],
+            vaccinationRate: [60, 70, 80, 90, 95] // Ngược lại - giá trị cao = tốt
+        };
+
+        // Màu sắc từ an toàn đến nguy hiểm (trừ tỷ lệ tiêm chủng thì ngược lại)
+        let colorScale;
+
+        if (dataType === "vaccinationRate") {
+            // Xanh lá -> vàng -> đỏ (tỷ lệ cao = xanh lá)
+            colorScale = [
+                [220, 50, 50, 0.7],    // Đỏ - thấp nhất
+                [240, 150, 50, 0.7],   // Cam
+                [240, 230, 50, 0.7],   // Vàng
+                [150, 230, 50, 0.7],   // Vàng-xanh
+                [50, 200, 50, 0.7]     // Xanh lá - cao nhất
+            ];
+        } else {
+            // Xanh lá -> vàng -> đỏ (số ca cao = đỏ)
+            colorScale = [
+                [50, 200, 50, 0.7],    // Xanh lá - thấp nhất
+                [150, 230, 50, 0.7],   // Vàng-xanh
+                [240, 230, 50, 0.7],   // Vàng
+                [240, 150, 50, 0.7],   // Cam
+                [220, 50, 50, 0.7]     // Đỏ - cao nhất
+            ];
+        }
+
+        const currentThresholds = thresholds[dataType];
+
+        // Xác định mức dựa trên giá trị
+        let level = 0;
+        for (let i = 0; i < currentThresholds.length; i++) {
+            if (dataType === "vaccinationRate") {
+                // Với tỷ lệ tiêm chủng, cao hơn = tốt hơn
+                if (value >= currentThresholds[i]) {
+                    level = i + 1;
+                }
+            } else {
+                // Với số ca, thấp hơn = tốt hơn
+                if (value >= currentThresholds[i]) {
+                    level = i + 1;
+                }
+            }
+        }
+
+        return colorScale[level] || colorScale[0];
     };
 
 
@@ -156,15 +294,6 @@ const MapComponent = () => {
                         "vinh_long.json"
                     ];
 
-                    // Default colors for provinces if not specified in JSON
-                    const defaultColors = [
-                        [216, 108, 114, 0.6], // red
-                        [108, 216, 114, 0.6], // green
-                        [108, 114, 216, 0.6], // blue
-                        [216, 114, 216, 0.6], // purple
-                        [216, 216, 114, 0.6]  // yellow
-                    ];
-
                     // Load each province file using fetch
                     for (let i = 0; i < provincesToLoad.length; i++) {
                         const provinceFile = provincesToLoad[i];
@@ -174,6 +303,38 @@ const MapComponent = () => {
                                 throw new Error(`Failed to load province: ${provinceFile}`);
                             }
                             const data = await response.json();
+
+                            // Lấy tên tỉnh từ tên file
+                            const provinceName = provinceFile.replace('.json', '');
+
+                            // Lấy dữ liệu dịch tễ cho tỉnh này
+                            const provinceEpidemicData = epidemicData[provinceName] || {
+                                totalCases: 0,
+                                activeCases: 0,
+                                newCases: 0,
+                                vaccinationRate: 0
+                            };
+
+                            // Xác định dữ liệu dựa trên loại bệnh đã chọn
+                            let dataToUse = provinceEpidemicData;
+
+                            // Nếu chọn một loại bệnh cụ thể (không phải "all"), lấy dữ liệu của bệnh đó
+                            if (selectedDisease !== "all" && provinceEpidemicData[selectedDisease]) {
+                                dataToUse = provinceEpidemicData[selectedDisease];
+                            }
+
+                            // Xác định màu sắc dựa trên loại dữ liệu hiển thị
+                            const value = dataToUse[selectedDataType] || 0;
+
+                            // Nếu chọn loại bệnh cụ thể, sử dụng màu của bệnh đó làm cơ sở
+                            let fillColor;
+                            if (selectedDisease !== "all") {
+                                const diseaseColor = diseaseTypes.find(d => d.value === selectedDisease)?.color || [100, 100, 100, 0.7];
+                                const opacity = Math.min(0.2 + (value / (selectedDataType === "totalCases" ? 5000 : 2000)) * 0.6, 0.8);
+                                fillColor = [diseaseColor[0], diseaseColor[1], diseaseColor[2], opacity];
+                            } else {
+                                fillColor = getColorByValue(value, selectedDataType);
+                            }
 
                             // Create polygon geometry
                             const polygonGeometry = {
@@ -185,22 +346,89 @@ const MapComponent = () => {
                             // Create symbol for the polygon
                             const polygonSymbol = {
                                 type: "simple-fill",
-                                color: data.color || defaultColors[i % defaultColors.length],
+                                color: fillColor,
                                 outline: {
                                     color: [255, 255, 255, 0.8],
                                     width: 1
                                 }
                             };
 
-                            // Create graphic for the polygon
+                            // Tạo template cho popup
+                            const popupTemplate = new PopupTemplate({
+                                title: data.title || provinceName,
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: `
+                                            <div style="padding: 10px;">
+                                                <h3 style="margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Thông tin dịch tễ</h3>
+                                                ${selectedDisease !== "all" ?
+                                                `<div style="margin-bottom: 10px; font-weight: bold; color: rgb(${diseaseTypes.find(d => d.value === selectedDisease)?.color.slice(0, 3).join(',')})">
+                                                        ${diseaseTypes.find(d => d.value === selectedDisease)?.label || ''}
+                                                    </div>` : ''}
+                                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                                    <div style="font-weight: bold;">Tổng số ca:</div>
+                                                    <div>${dataToUse.totalCases?.toLocaleString() || 0}</div>
+                                                    
+                                                    <div style="font-weight: bold;">Đang điều trị:</div>
+                                                    <div>${dataToUse.activeCases?.toLocaleString() || 0}</div>
+                                                    
+                                                    <div style="font-weight: bold;">Đã hồi phục:</div>
+                                                    <div>${dataToUse.recovered?.toLocaleString() || 0}</div>
+                                                    
+                                                    <div style="font-weight: bold;">Tử vong:</div>
+                                                    <div>${dataToUse.deaths?.toLocaleString() || 0}</div>
+                                                    
+                                                    <div style="font-weight: bold;">Ca mới trong ngày:</div>
+                                                    <div>${dataToUse.newCases?.toLocaleString() || 0}</div>
+                                                    
+                                                    ${dataToUse.vaccinationRate ?
+                                                `<div style="font-weight: bold;">Tỷ lệ tiêm chủng:</div>
+                                                        <div>${dataToUse.vaccinationRate?.toFixed(1) || 0}%</div>` : ''}
+                                                </div>
+                                                
+                                                ${selectedDisease === "all" ? `
+                                                <h3 style="margin: 15px 0 10px; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Chi tiết theo bệnh</h3>
+                                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 12px;">
+                                                    ${epidemicData.diseaseTypes.map(disease => {
+                                                    const diseaseData = provinceEpidemicData[disease.id] || { totalCases: 0 };
+                                                    return `
+                                                            <div style="font-weight: bold; color: rgb(${disease.color.slice(0, 3).join(',')})">
+                                                                ${disease.name}:
+                                                            </div>
+                                                            <div style="grid-column: span 2;">
+                                                                ${diseaseData.totalCases?.toLocaleString() || 0} ca
+                                                            </div>
+                                                        `;
+                                                }).join('')}
+                                                </div>
+                                                ` : ''}
+                                                
+                                                <div style="margin-top: 12px; font-size: 13px; color: #666;">
+                                                    <div style="font-weight: bold;">Tỷ lệ mắc/100,000 dân:</div>
+                                                    <div>${dataToUse.incidenceRate || 0}</div>
+                                                </div>
+                                            </div>
+                                        `
+                                    }
+                                ]
+                            });
+
+                            // Create graphic for the polygon with popup
                             const polygonGraphic = new Graphic({
                                 geometry: polygonGeometry,
                                 symbol: polygonSymbol,
                                 attributes: {
-                                    title: data.title,
-                                    region: data.region,
-                                    population: data.population
-                                }
+                                    title: data.title || provinceName,
+                                    region: data.region || "",
+                                    totalCases: provinceEpidemicData.totalCases || 0,
+                                    activeCases: provinceEpidemicData.activeCases || 0,
+                                    newCases: provinceEpidemicData.newCases || 0,
+                                    recovered: provinceEpidemicData.recovered || 0,
+                                    deaths: provinceEpidemicData.deaths || 0,
+                                    vaccinationRate: provinceEpidemicData.vaccinationRate || 0
+                                },
+                                popupTemplate: popupTemplate
                             });
 
                             // Add to the layer
@@ -208,6 +436,11 @@ const MapComponent = () => {
                         } catch (error) {
                             console.error(`Error loading province ${provinceFile}:`, error);
                         }
+                    }
+
+                    // Apply labels if needed
+                    if (showLabels) {
+                        toggleLabels(true);
                     }
 
                 }, (error) => {
@@ -225,7 +458,7 @@ const MapComponent = () => {
                 setMapError("Failed to initialize map");
             }
         }
-    }, [is3D, currentBasemap, showLabels]); // Add dependencies for map initialization
+    }, [is3D, currentBasemap, showLabels, selectedDataType, selectedDisease]); // Add dependencies for map initialization
 
 
     return (
@@ -247,12 +480,162 @@ const MapComponent = () => {
             )}
             <div className="mapDiv" ref={mapDiv} style={{ height: '100vh', width: "100%" }}></div>
 
+            <div className=" absolute bg-white top-5 left-12 rounded-lg shadow-lg p-1 z-10 flex items-center">
+                <div className="flex flex-col">
+                    <div className="text-xs font-semibold ml-2 mb-1">Loại dữ liệu</div>
+                    <Select
+                        defaultValue={selectedDataType}
+                        style={{ width: 170, height: 35 }}
+                        onChange={changeDataType}
+                        options={dataTypes}
+                        dropdownStyle={{ zIndex: 2000 }}
+                        suffixIcon={
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        }
+                    />
+                </div>
+                <div className="bg-white rounded-lg shadow-lg p-1 flex items-center">
+                    <div className="flex flex-col">
+                        <div className="text-xs font-semibold ml-2 mb-1">Loại bệnh</div>
+                        <Select
+                            defaultValue={selectedDisease}
+                            style={{ width: 170, height: 35 }}
+                            onChange={changeDisease}
+                            options={diseaseOptions}
+                            dropdownStyle={{ zIndex: 2000 }}
+                            suffixIcon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            }
+                        />
+                    </div>
+                </div>
+            </div>
+
+
             {/* Controls with Ant Design Select for basemap */}
-            <div className="absolute bottom-6 left-6 z-10 flex space-x-3">
+            <div className="absolute bottom-6 left-6 z-10 flex space-x-4 p-2 rounded-lg items-end">
+                {/* Legend */}
+                <div className="z-10 bg-white rounded-lg shadow-lg p-3 flex flex-col" style={{ minWidth: "200px" }}>
+                    <h3 className="text-sm font-bold mb-2">Chú thích</h3>
+                    {selectedDisease !== "all" && (
+                        <div className="flex items-center mb-2">
+                            <div
+                                className="w-4 h-4 mr-2"
+                                style={{
+                                    backgroundColor: `rgba(${diseaseTypes.find(d => d.value === selectedDisease)?.color.slice(0, 3).join(',')}, 0.7)`
+                                }}
+                            ></div>
+                            <span className="text-xs font-semibold">
+                                {diseaseTypes.find(d => d.value === selectedDisease)?.label}
+                            </span>
+                        </div>
+                    )}
+                    <div className="text-xs mb-1">{dataTypes.find(d => d.value === selectedDataType)?.label}</div>
+                    <div className="flex flex-col">
+                        {selectedDataType === "vaccinationRate" ? (
+                            <>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(220, 50, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Dưới 60%</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 150, 50, 0.7)` }}></div>
+                                    <span className="text-xs">60% - 70%</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">70% - 80%</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(150, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">80% - 90%</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(50, 200, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Trên 90%</span>
+                                </div>
+                            </>
+                        ) : selectedDataType === "totalCases" ? (
+                            <>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(50, 200, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Dưới 100 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(150, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">100 - 500 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">500 - 1.000 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 150, 50, 0.7)` }}></div>
+                                    <span className="text-xs">1.000 - 3.000 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(220, 50, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Trên 3.000 ca</span>
+                                </div>
+                            </>
+                        ) : selectedDataType === "activeCases" ? (
+                            <>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(50, 200, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Dưới 50 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(150, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">50 - 200 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">200 - 500 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 150, 50, 0.7)` }}></div>
+                                    <span className="text-xs">500 - 1.000 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(220, 50, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Trên 1.000 ca</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(50, 200, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Dưới 10 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(150, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">10 - 50 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 230, 50, 0.7)` }}></div>
+                                    <span className="text-xs">50 - 100 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(240, 150, 50, 0.7)` }}></div>
+                                    <span className="text-xs">100 - 200 ca</span>
+                                </div>
+                                <div className="flex items-center my-1">
+                                    <div className="w-4 h-4 mr-2" style={{ backgroundColor: `rgba(220, 50, 50, 0.7)` }}></div>
+                                    <span className="text-xs">Trên 200 ca</span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
                 {/* Toggle 2D/3D button */}
                 <button
                     onClick={toggleViewMode}
-                    className="flex items-center justify-center px-4 py-3 rounded-lg bg-white shadow-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center px-4 py-3 h-24 rounded-lg bg-white shadow-lg hover:bg-gray-50 transition-colors "
                     title={is3D ? "Switch to 2D view" : "Switch to 3D view"}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -266,24 +649,26 @@ const MapComponent = () => {
                 </button>
 
                 {/* Ant Design Select for basemap */}
-                <div className="bg-white rounded-lg shadow-lg p-1 flex items-center">
-                    <Select
-                        defaultValue={currentBasemap}
-                        style={{ width: 150, height: 45 }}
-                        onChange={changeBasemap}
-                        options={basemaps.map(map => ({
-                            value: map,
-                            label: map.charAt(0).toUpperCase() + map.slice(1).replace('-', ' ')
-                        }))}
-                        dropdownStyle={{ zIndex: 2000 }}
-                        suffixIcon={
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4" />
-                            </svg>
-                        }
-                    />
+                <div className="bg-white rounded-lg shadow-lg p-1 flex items-center h-24">
+                    <div className="flex flex-col">
+                        <div className="text-xs font-semibold ml-2 mb-1">Bản đồ nền</div>
+                        <Select
+                            defaultValue={currentBasemap}
+                            style={{ width: 150, height: 35 }}
+                            onChange={changeBasemap}
+                            options={basemaps.map(map => ({
+                                value: map,
+                                label: map.charAt(0).toUpperCase() + map.slice(1).replace('-', ' ')
+                            }))}
+                            dropdownStyle={{ zIndex: 2000 }}
+                            suffixIcon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4" />
+                                </svg>
+                            }
+                        />
+                    </div>
                 </div>
-
             </div>
         </div>
     );
