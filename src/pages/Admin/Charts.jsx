@@ -44,18 +44,15 @@ export default function AdminCharts({ onData, filters }) {
 
   // Group patients by date and count cases per day
   const groupedData = data.reduce((acc, item) => {
-    const date = item.Date ? new Date(item.Date).toLocaleDateString() : '';
+    // Lấy ngày chuẩn yyyy-mm-dd để group
+    const dateObj = item.Date ? new Date(item.Date) : null;
+    const date = dateObj ? dateObj.toISOString().slice(0, 10) : '';
     if (!date) return acc;
     acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
   // Sắp xếp ngày tăng dần, lấy toàn bộ các ngày có dữ liệu
-  const sortedDates = Object.keys(groupedData).sort((a, b) => {
-    // Chuyển dd/mm/yyyy về yyyy-mm-dd để so sánh
-    const da = new Date(a.split('/').reverse().join('-'));
-    const db = new Date(b.split('/').reverse().join('-'));
-    return da - db;
-  });
+  const sortedDates = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
   const chartData = sortedDates.map(date => ({ date, value: groupedData[date] }));
 
   const config = {
