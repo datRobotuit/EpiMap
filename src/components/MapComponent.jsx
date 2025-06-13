@@ -594,7 +594,7 @@ const MapComponent = () => {
 
             <div className="mapDiv" ref={mapDiv} style={{ height: '100vh', width: "100%" }}></div>
 
-            <div className="absolute bg-white top-5 left-12 rounded-lg shadow-lg p-1 z-10 flex items-center">
+            <div className="absolute bg-white top-5 left-12 rounded-lg shadow-lg p-1 z-10 flex items-center space-x-4">
                 <div className="flex flex-col">
                     <div className="text-xs font-semibold ml-2 mb-1">Loại dữ liệu</div>
                     <Select
@@ -627,19 +627,21 @@ const MapComponent = () => {
                         />
                     </div>
                 </div>
-            </div>
 
-            {/* Healthcare facilities toggle */}
-            <div className="absolute bg-white top-5 right-12 rounded-lg shadow-lg p-3 z-10">
-                <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium mr-3">Cơ sở y tế</span>
-                    <Switch
-                        checked={showFacilities}
-                        onChange={toggleFacilities}
-                        loading={loadingFacilities}
-                    />
+                {/* Healthcare facilities toggle */}
+                <div className="rounded-lg p-3 z-10">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium mr-3">Cơ sở y tế</span>
+                        <Switch
+                            checked={showFacilities}
+                            onChange={toggleFacilities}
+                            loading={loadingFacilities}
+                        />
+                    </div>
                 </div>
             </div>
+
+
 
             {/* Controls with Ant Design Select for basemap */}
             <div className="absolute bottom-6 left-6 z-10 flex space-x-4 p-2 rounded-lg items-end">
