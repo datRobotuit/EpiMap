@@ -1,9 +1,11 @@
 import epidemiologyApi from "../../apis/epidemiologyApi";
-import { getTraceByPatientId } from '../../apis/traceApi';
+import { getTraceByPatientId } from "../../apis/traceApi";
 import AddPatientModal from "./_components/AddPatientModal";
-import UpdatePatientModal from "./_components/UpdatePatientModal";
 import TraceModal from "./_components/TraceModal";
+import UpdatePatientModal from "./_components/UpdatePatientModal";
 import AddIcon from "@mui/icons-material/Add";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
@@ -18,7 +20,9 @@ import {
   Tooltip,
   CircularProgress,
 } from "@mui/material";
+import { saveAs } from "file-saver";
 import React, { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 
 const columns = [
   { id: "Patient", label: "Họ tên", minWidth: 120 },
@@ -55,6 +59,7 @@ export default function Epidemiology() {
   const [editingPatient, setEditingPatient] = useState(null);
   const [traceModalOpen, setTraceModalOpen] = useState(false);
   const [traceData, setTraceData] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
   // Lấy danh sách bệnh nhân
   const fetchPatients = async () => {
@@ -147,9 +152,122 @@ export default function Epidemiology() {
       setTraceData(data);
       setTraceModalOpen(true);
     } catch (err) {
-      alert('Không thể lấy dữ liệu truy vết!');
+      alert("Không thể lấy dữ liệu truy vết!");
     }
     setLoading(false);
+  };
+
+  // Hàm xử lý khi click vào header để sort
+  const handleSort = (colId) => {
+    setSortConfig((prev) => {
+      if (prev.key === colId) {
+        // Đảo chiều sort nếu click lại cùng 1 cột
+        return {
+          key: colId,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+      return { key: colId, direction: "asc" };
+    });
+  };
+
+  // Sort dữ liệu trước khi render
+  const sortedPatients = React.useMemo(() => {
+    if (!sortConfig.key) return patients;
+    const sorted = [...patients].sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      // Nếu là ngày thì convert về Date
+      if (sortConfig.key === "Date") {
+        aValue = aValue ? new Date(aValue) : 0;
+        bValue = bValue ? new Date(bValue) : 0;
+        return sortConfig.direction === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      // Nếu là Họ tên thì sort theo số
+      if (sortConfig.key === "Patient") {
+        const getNumber = (val) => {
+          if (!val) return 0;
+          const match = val.match(/^BN(\d+)$/i);
+          return match ? parseInt(match[1], 10) : 0;
+        };
+        aValue = getNumber(aValue);
+        bValue = getNumber(bValue);
+        return sortConfig.direction === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      // Nếu là số
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.direction === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+      // So sánh string
+      return sortConfig.direction === "asc"
+        ? String(aValue || "").localeCompare(String(bValue || ""))
+        : String(bValue || "").localeCompare(String(aValue || ""));
+    });
+    return sorted;
+  }, [patients, sortConfig]);
+
+  // Hàm xuất Excel
+  const handleExportExcel = () => {
+    const exportData = sortedPatients.map((row) => [
+      row.Patient,
+      row.Age,
+      row.Gender,
+      row.Province,
+      row.Status,
+      row.Type,
+      row.Date ? new Date(row.Date).toLocaleDateString("vi-VN") : "",
+    ]);
+
+    const header = [
+      "Họ tên",
+      "Tuổi",
+      "Giới tính",
+      "Tỉnh/TP",
+      "Trạng thái",
+      "Loại bệnh",
+      "Ngày phát hiện",
+    ];
+
+    // Tạo worksheet và thêm header + data
+    const worksheet = XLSX.utils.aoa_to_sheet([header, ...exportData]);
+
+    // Định dạng độ rộng cột
+    worksheet["!cols"] = [
+      { wch: 18 },
+      { wch: 8 },
+      { wch: 10 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 16 },
+    ];
+
+    // Freeze dòng tiêu đề
+    worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+
+    // Tạo workbook và xuất file
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách bệnh nhân");
+
+    // Ghi file với style
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+      cellStyles: true,
+    });
+    const file = new Blob([excelBuffer], {
+      type: "application/octet-stream",
+    });
+    saveAs(file, "danh_sach_benh_nhan.xlsx");
   };
 
   return (
@@ -198,9 +316,14 @@ export default function Epidemiology() {
           <Button
             variant="outlined"
             className={`rounded-lg text-xs font-bold py-2 px-6 mr-2 shadow-lg transition-transform border-blue-500 ${
-              selectedRows.length !== 1 ? "bg-gray-200 text-gray-400" : "text-blue-700"
+              selectedRows.length !== 1
+                ? "bg-gray-200 text-gray-400"
+                : "text-blue-700"
             }`}
-            style={{ marginRight: 8, background: selectedRows.length !== 1 ? "#f3f4f6" : "#e0f2fe" }}
+            style={{
+              marginRight: 8,
+              background: selectedRows.length !== 1 ? "#f3f4f6" : "#e0f2fe",
+            }}
             disabled={selectedRows.length !== 1}
             onClick={handleTrace}
           >
@@ -213,6 +336,13 @@ export default function Epidemiology() {
             onClick={() => setIsAddModalOpen(true)}
           >
             Thêm ca mới
+          </Button>
+          <Button
+            variant="outlined"
+            className="rounded-lg text-xs font-bold py-2 px-6 shadow-lg transition-transform border-green-500 text-green-700"
+            onClick={handleExportExcel}
+          >
+            Xuất Excel
           </Button>
         </div>
       </div>
@@ -227,7 +357,15 @@ export default function Epidemiology() {
           <table className="min-w-full">
             <thead>
               <tr className="bg-gradient-to-r from-blue-50 to-purple-50 border-t border-zinc-200">
-                <th className="px-2 py-2 text-left">
+                <th
+                  className="px-2 py-2 text-left"
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    background: "#f3f4f6",
+                    zIndex: 2,
+                  }}
+                >
                   <Checkbox
                     checked={
                       patients.length > 0 &&
@@ -245,17 +383,58 @@ export default function Epidemiology() {
                 {columns.map((col) => (
                   <th
                     key={col.id}
-                    className="px-2 py-2 text-left text-sm font-semibold text-blue-700"
-                    style={{ minWidth: col.minWidth }}
+                    className="px-2 py-2 text-left text-sm font-semibold text-blue-700 select-none"
+                    style={{
+                      minWidth: col.minWidth,
+                      position: "sticky",
+                      top: 0,
+                      background: "#f3f4f6",
+                      zIndex: 2,
+                      cursor: col.id === "Status" ? "default" : "pointer",
+                    }}
+                    // Bỏ sort ở cột "Status"
+                    {...(col.id !== "Status" && {
+                      onClick: () => handleSort(col.id),
+                    })}
                   >
                     {col.label}
+                    {/* Bỏ icon sort ở cột "Status" */}
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 24,
+                        verticalAlign: "middle",
+                      }}
+                    >
+                      {sortConfig.key === col.id && col.id !== "Status" ? (
+                        sortConfig.direction === "asc" ? (
+                          <ArrowDropUpIcon
+                            fontSize="medium"
+                            style={{ fontSize: 20 }}
+                          />
+                        ) : (
+                          <ArrowDropDownIcon
+                            fontSize="medium"
+                            style={{ fontSize: 20 }}
+                          />
+                        )
+                      ) : null}
+                    </span>
                   </th>
                 ))}
-                <th className="px-2 py-2"></th>
+                <th
+                  className="px-2 py-2"
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    background: "#f3f4f6",
+                    zIndex: 2,
+                  }}
+                ></th>
               </tr>
             </thead>
             <tbody>
-              {patients.length === 0 ? (
+              {sortedPatients.length === 0 ? (
                 <tr>
                   <td
                     colSpan={columns.length + 2}
@@ -265,7 +444,7 @@ export default function Epidemiology() {
                   </td>
                 </tr>
               ) : (
-                patients.map((row, idx) => (
+                sortedPatients.map((row, idx) => (
                   <tr
                     key={row._id}
                     className={`border-t border-zinc-100 transition-colors duration-150 ${
