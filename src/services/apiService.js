@@ -58,3 +58,36 @@ export const fetchFacilities = async () => {
         throw error;
     }
 };
+
+// Get top 5 provinces with highest total cases
+export const fetchTop5 = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/report/top5/${diseaseType}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching top 5 provinces with highest total cases:', error);
+        throw error;
+    }
+};
+
+// Get summary statistics
+export const fetchSummaryStats = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/report/totals/${diseaseType}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching summary statistics:', error);
+        throw error;
+    }
+};
+
+// Get demographics
+export const fetchDemographics = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/patient/summary/${diseaseType}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching demographics:', error);
+        throw error;
+    }
+};
