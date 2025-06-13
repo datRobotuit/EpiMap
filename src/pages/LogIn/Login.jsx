@@ -1,6 +1,6 @@
-import { login } from "../../services/loginService";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { login } from "../../services/loginService";
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -15,12 +15,10 @@ export default function Login() {
     const res = await login(username, password);
     setLoading(false);
     if (res.success) {
-      // Save token to localStorage if it exists in the response
-      if (res.token) {
-        localStorage.setItem('token', res.token);
-        sessionStorage.setItem('token', res.token);
-        Console.log("Token saved:", res.token);
-      }
+      // Store user data in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(res.user));
+      // You would typically store a token here as well if your API returns one
+      // localStorage.setItem('token', res.token);
       alert("Đăng nhập thành công!");
       navigate("/admin/home");
     } else {

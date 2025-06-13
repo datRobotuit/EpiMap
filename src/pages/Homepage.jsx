@@ -11,7 +11,7 @@ export default function Homepage() {
     };
     const handleClick = () => {
         // Check if user is logged in (You might need to adjust this based on your auth system)
-        const isLoggedIn = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const isLoggedIn = localStorage.getItem('user');
 
         if (!isLoggedIn) {
             // If not logged in, redirect to login page
