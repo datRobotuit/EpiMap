@@ -9,7 +9,7 @@ const fetchLatestReport = async (provinceName, diseaseType) => {
         const province = encodeURIComponent(provinceName);
         const type = encodeURIComponent(diseaseType);
 
-    const response = await axios.get(`http://localhost:5000/api/report/latest/${province}/${type}`);
+    const response = await axios.get(`http://localhost:3000/api/report/latest/${province}/${type}`);
     console.log('Latest Report:', response.data);
   } catch (error) {
       console.error('Error fetching report:', error.response?.data || error.message);
