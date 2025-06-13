@@ -1,53 +1,153 @@
-import { Select, Tabs, Typography } from 'antd';
-import { useState } from "react";
+import { Alert, Select, Spin, Tabs, Typography } from 'antd';
+import { useEffect, useState } from "react";
+import { fetchDiseaseTotals, fetchDiseaseTypes, fetchRecentDiseaseData } from '../services/apiService';
 import { dailyCases, nationalStats } from '../utils/province-stats';
-import renderColumnChart from './Dashboard/renderColumnChart';
 import renderDemographicsTab from './Dashboard/renderDemographicsTab';
-import renderProvincesTab from './Dashboard/renderProvinceTab';
 import renderLineChart from './Dashboard/renderLineChart';
+import renderProvincesTab from './Dashboard/renderProvinceTab';
 const { Title, Text } = Typography;
 
 const DashboardPanel = ({ isOpen, onToggle }) => {
     const [activeTab, setActiveTab] = useState("overview");
-    const [diseaseFilter, setDiseaseFilter] = useState("all");
+    const [diseaseFilter, setDiseaseFilter] = useState("covid19");
+    const [diseaseOptions, setDiseaseOptions] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [diseaseData, setDiseaseData] = useState({
+        totals: null,
+        recentData: [],
+    });
 
-    // Options for disease filter
-    const diseaseOptions = [
-        { value: "all", label: "Tất cả" },
-        { value: "covid19", label: "COVID-19" },
-        { value: "Sốt xuất huyết", label: "Sốt xuất huyết" },
-        { value: "Đậu mùa khỉ", label: "Đậu mùa khỉ" },
-    ];
+    // Fetch disease types on component mount
+    useEffect(() => {
+        const fetchDiseaseTypeOptions = async () => {
+            try {
+                const types = await fetchDiseaseTypes();
+                const options = types.map(type => ({
+                    value: type,
+                    label: type === 'covid19' ? 'COVID-19' : type
+                }));
+
+                // // Add "All" option
+                // options.unshift({ value: "all", label: "Tất cả" });
+
+                setDiseaseOptions(options);
+            } catch (error) {
+                console.error('Failed to fetch disease types:', error);
+                // Fallback to default options if API fails
+                setDiseaseOptions([
+                    // { value: "all", label: "Tất cả" },
+                    { value: "covid19", label: "COVID-19" },
+                    { value: "Sốt xuất huyết", label: "Sốt xuất huyết" },
+                    { value: "Đậu mùa khỉ", label: "Đậu mùa khỉ" },
+                ]);
+            }
+        };
+
+        fetchDiseaseTypeOptions();
+    }, []);
+
+    // Fetch disease data when filter changes
+    useEffect(() => {
+        const fetchData = async () => {
+            if (diseaseFilter === "all") {
+                // If "all" is selected, use the mock data
+                return;
+            }
+
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const [totalsData, recentData] = await Promise.all([
+                    fetchDiseaseTotals(diseaseFilter),
+                    fetchRecentDiseaseData(diseaseFilter)
+                ]);
+
+                setDiseaseData({
+                    totals: totalsData,
+                    recentData: recentData
+                });
+            } catch (error) {
+                setError('Failed to fetch disease data. Please try again later.');
+                console.error('Error fetching disease data:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [diseaseFilter]);
 
     const renderOverviewTab = () => {
+        if (isLoading) {
+            return (
+                <div className="flex justify-center items-center h-64">
+                    <Spin size="large" tip="Đang tải dữ liệu..." />
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <Alert
+                    message="Lỗi"
+                    description={error}
+                    type="error"
+                    showIcon
+                    className="m-5"
+                />
+            );
+        }
 
         let filteredStats = { ...nationalStats };
         let filteredDailyCases = [...dailyCases];
 
-        // Options for disease filter
-
-        // Simulating different data for different disease types
-        if (diseaseFilter !== "all") {
-            // Modify the stats based on the selected disease
-            const multiplier = {
-                "covid19": 0.2,  // Using the current data for COVID-19
-                "Sốt xuất huyết": 0.5,   // 60% of COVID-19 cases for Dengue
-                "Đậu mùa khỉ": 0.3 // 80% of COVID-19 cases for Influenza
-            }[diseaseFilter] || 1.0;
+        // Use API data if available and a specific disease is selected
+        if (diseaseFilter !== "all" && diseaseData.totals) {
+            const apiData = diseaseData.totals;
 
             filteredStats = {
-                ...nationalStats,
-                totalCases: Math.floor(nationalStats.totalCases * multiplier),
-                activeCases: Math.floor(nationalStats.activeCases * multiplier),
-                recovered: Math.floor(nationalStats.recovered * multiplier),
-                deaths: Math.floor(nationalStats.deaths * multiplier),
-                vaccinated: {
-                    firstDose: nationalStats.vaccinated.firstDose * multiplier,
-                    secondDose: nationalStats.vaccinated.secondDose * multiplier,
-                    booster: nationalStats.vaccinated.booster * multiplier,
-                }
+                totalCases: apiData.TotalInfections || 0,
+                activeCases: apiData.TotalTreatment || 0,
+                recovered: apiData.TotalRecovered || apiData.TotalRecover || 0,
+                deaths: apiData.TotalDeath || 0,
             };
 
+            // Format recent data for chart
+            if (diseaseData.recentData && diseaseData.recentData.length > 0) {
+                filteredDailyCases = diseaseData.recentData.map(day => ({
+                    date: day.Date ? new Date(day.Date).toISOString().substring(0, 10) : "",
+                    cases: day.DailyInfection || 0
+                })).reverse(); // Reverse to show oldest to newest
+            }
+        }
+        // } else {
+        //     // If "all" is selected or API data not available, simulate different data
+        //     const multiplier = {
+        //         "covid19": 0.2,
+        //         "Sốt xuất huyết": 0.5,
+        //         "Đậu mùa khỉ": 0.3
+        //     }[diseaseFilter] || 1.0;
+
+        //     filteredStats = {
+        //         ...nationalStats,
+        //         totalCases: Math.floor(nationalStats.totalCases * multiplier),
+        //         activeCases: Math.floor(nationalStats.activeCases * multiplier),
+        //         recovered: Math.floor(nationalStats.recovered * multiplier),
+        //         deaths: Math.floor(nationalStats.deaths * multiplier),
+        //         vaccinated: {
+        //             firstDose: nationalStats.vaccinated.firstDose * multiplier,
+        //             secondDose: nationalStats.vaccinated.secondDose * multiplier,
+        //             booster: nationalStats.vaccinated.booster * multiplier,
+        //         }
+        //     };
+
+        //     filteredDailyCases = dailyCases.map(day => ({
+        //         ...day,
+        //         cases: Math.floor(day.cases * multiplier)
+        //     }));
+        // }
             // Modify the daily cases data
             // filteredDailyCases = dailyCases.map(day => ({
             //     ...day,
@@ -61,15 +161,15 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
             cases: d.TotalInfections
         }));
 
-        const vaccinationData = [
-            { category: "Mũi 1", value: filteredStats.vaccinated.firstDose / 1000000 },
-            { category: "Mũi 2", value: filteredStats.vaccinated.secondDose / 1000000 },
-            { category: "Mũi bổ sung", value: filteredStats.vaccinated.booster / 1000000 }
-        ];
+
 
         const selectedDiseaseName = diseaseFilter !== "all"
             ? diseaseOptions.find(opt => opt.value === diseaseFilter)?.label
             : null;
+
+        const lastUpdatedDate = diseaseData.totals?.Date
+            ? new Date(diseaseData.totals.Date).toLocaleDateString('vi-VN')
+            : "11/06/2025";
 
         return (
             <div className="p-5">
@@ -149,24 +249,6 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
                     </div>
                     <div className="bg-white rounded-lg overflow-hidden">
                         {renderLineChart(dailyCasesData, 'date', 'cases', 'Diễn biến ca nhiễm')}
-                    </div>
-                </div>
-
-                <div className="mb-6 bg-white/70 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100">
-                    <div className="flex items-center mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                        </svg>
-                        <Title level={5} style={{ margin: 0 }}>Tình trạng tiêm chủng {selectedDiseaseName && `- ${selectedDiseaseName}`}</Title>
-                    </div>
-                    <div className="bg-white rounded-lg overflow-hidden">
-                        {renderColumnChart(
-                            vaccinationData,
-                            'category',
-                            'value',
-                            'Tình trạng tiêm chủng (triệu người)',
-                            ['#3b82f6', '#10b981', '#6366f1']
-                        )}
                     </div>
                 </div>
             </div>
@@ -249,9 +331,9 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
                 {activeTab === "demographics" && renderDemographicsTab()}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 pt-1 text-center text-xs text-gray-500 rounded-b-lg border-t border-white/30 bg-white/50 backdrop-blur-sm  ">
-                <p>Dữ liệu mẫu - Cập nhật lần cuối: 11/06/2025</p>
-                <p className=" text-blue-500 hover:underline cursor-pointer">Xem nguồn dữ liệu</p>
+            <div className="absolute bottom-0 left-0 right-0 pt-1 text-center text-xs text-gray-500 rounded-b-lg border-t border-white/30 bg-white/50 backdrop-blur-sm">
+                <p>Dữ liệu được cập nhật theo API - Cập nhật lần cuối: {diseaseData.totals?.Date ? new Date(diseaseData.totals.Date).toLocaleDateString('vi-VN') : "11/06/2025"}</p>
+                <p className="text-blue-500 hover:underline cursor-pointer">Xem nguồn dữ liệu</p>
             </div>
         </div>
     );

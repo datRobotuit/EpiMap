@@ -3,24 +3,13 @@
  */
 
 import axios from 'axios';
-
-const fetchLatestReport = async (provinceName, diseaseType) => {
-    try {
-        const province = encodeURIComponent(provinceName);
-        const type = encodeURIComponent(diseaseType);
-
-    const response = await axios.get(`http://localhost:3000/api/report/latest/${province}/${type}`);
-    console.log('Latest Report:', response.data);
-  } catch (error) {
-      console.error('Error fetching report:', error.response?.data || error.message);
-    }
-};
+import { fetchLatestReport } from '../services/apiService';
 
 // Danh sách các loại bệnh
 const DISEASE_TYPES = [
     { id: "covid19", name: "Covid-19", color: [220, 53, 69, 0.7] },
-    { id: "dengue", name: "Sốt xuất huyết", color: [255, 193, 7, 0.7] },
-    { id: "influenza", name: "Cúm mùa", color: [13, 110, 253, 0.7] },
+    { id: "Sốt xuất huyết", name: "Sốt xuất huyết", color: [255, 193, 7, 0.7] },
+    { id: "Đậu mùa khỉ", name: "Đậu mùa khỉ", color: [13, 110, 253, 0.7] },
     { id: "malaria", name: "Sốt rét", color: [25, 135, 84, 0.7] },
     { id: "hepatitis", name: "Viêm gan", color: [111, 66, 193, 0.7] }
 ];
@@ -28,7 +17,9 @@ const DISEASE_TYPES = [
 // Sinh ngẫu nhiên số lượng ca bệnh cho từng tỉnh
 const generateMockData = () => {
     // Test API
-    // fetchLatestReport('An Giang', 'covid19');
+    fetchLatestReport('An Giang', 'covid19')
+        .then(data => console.log('Latest Report from API:', data))
+        .catch(err => console.error('Failed to fetch test data:', err));
 
     const allProvinces = [
         "ha_giang", "cao_bang", "lao_cai", "son_la", "lai_chau", "bac_kan", "lang_son",

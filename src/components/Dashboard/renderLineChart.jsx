@@ -1,37 +1,70 @@
 import { Line } from '@ant-design/charts';
 import { Card } from 'antd';
 
-const renderLineChart = (data, xField, yField, title) => {
+const renderLineChart = (data, xField, yField, title, color = '#1890ff') => {
+
     const config = {
         data,
         xField,
         yField,
         point: {
-            size: 3,
-            shape: 'circle',
+            size: 5,
+            shape: 'diamond',
+            style: {
+                fill: 'white',
+                stroke: color,
+                lineWidth: 2,
+            },
         },
-        color: '#3b82f6',
+        meta: {
+            [yField]: {
+                alias: 'Số ca nhiễm',
+                formatter: (val) => `${val.toLocaleString()} ca`,
+            },
+        },
+        color,
         lineStyle: {
             lineWidth: 3,
+            strokeOpacity: 0.7,
         },
-        tooltip: {
-            formatter: (datum) => {
-                return { name: 'Số ca', value: datum[yField] };
+        label: {},
+        smooth: true,
+        areaStyle: {
+            fill: color,
+            fillOpacity: 0.2,
+        },
+        animation: {
+            appear: {
+                animation: 'path-in',
+                duration: 1000,
+            },
+        },
+        title: {
+            text: title,
+            visible: !!title,
+        },
+        yAxis: {
+            grid: {
+                line: {
+                    style: {
+                        stroke: '#eee',
+                        lineDash: [4, 4],
+                    },
+                },
+            },
+            label: {
+                formatter: (text) => {
+                    return text.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                },
             },
         },
         xAxis: {
-            title: {
-                text: 'Ngày',
-            },
-            tickCount: 5,
-        },
-        yAxis: {
-            title: {
-                text: 'Số ca',
+            label: {
+                autoRotate: true,
+                autoHide: false,
+                autoEllipsis: false,
             },
         },
-        height: 250,
-        autoFit: true,
     };
 
     return (
@@ -40,4 +73,5 @@ const renderLineChart = (data, xField, yField, title) => {
         </Card>
     );
 };
+
 export default renderLineChart;
