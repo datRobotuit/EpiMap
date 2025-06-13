@@ -7,7 +7,7 @@ export const provincesData = [
     { province: "Hải Phòng", cases: 380, recovered: 310, deaths: 4, active: 66 },
     { province: "Hà Tĩnh", cases: 220, recovered: 180, deaths: 2, active: 38 },
     { province: "Nghệ An", cases: 290, recovered: 240, deaths: 3, active: 47 },
-    { province: "Thanh Hóa", cases: 310, recovered: 250, deaths: 3, active: 57 },
+    { province: "Thanh Hóa", cases: 310, recovered: 250, deaths: 3, active:57 },
 ];
 
 // National summary statistics

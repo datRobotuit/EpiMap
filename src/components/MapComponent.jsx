@@ -7,14 +7,16 @@ import Map from "@arcgis/core/Map";
 import PopupTemplate from "@arcgis/core/PopupTemplate";
 import MapView from "@arcgis/core/views/MapView";
 import SceneView from "@arcgis/core/views/SceneView";
-import { Select } from "antd";
+import { Select, Spin, Switch } from "antd";
 import { useEffect, useRef, useState } from "react";
+import { fetchFacilities } from "../services/apiService";
 import epidemicData from "../utils/mockEpidemicData";
 
 const MapComponent = () => {
     const mapDiv = useRef(null);
     const viewRef = useRef(null);
     const polygonsLayerRef = useRef(null);
+    const facilitiesLayerRef = useRef(null);
     const [mapError, setMapError] = useState(null);
     // Add new state variables
     const [is3D, setIs3D] = useState(false);
@@ -22,13 +24,15 @@ const MapComponent = () => {
     const [showLabels, setShowLabels] = useState(false);
     const [selectedDataType, setSelectedDataType] = useState("totalCases");
     const [selectedDisease, setSelectedDisease] = useState("all");
+    const [facilities, setFacilities] = useState([]);
+    const [showFacilities, setShowFacilities] = useState(false);
+    const [loadingFacilities, setLoadingFacilities] = useState(false);
 
     // Loại dữ liệu có thể hiển thị
     const dataTypes = [
         { value: "totalCases", label: "Tổng số ca" },
         { value: "activeCases", label: "Ca đang điều trị" },
         { value: "newCases", label: "Ca mới trong ngày" },
-        { value: "vaccinationRate", label: "Tỷ lệ tiêm chủng (%)" }
     ];
 
     // Danh sách loại bệnh từ dữ liệu mô phỏng
@@ -63,6 +67,26 @@ const MapComponent = () => {
     // Available basemaps
     const basemaps = ["dark-gray", "dark-gray-3d", "dark-gray-vector", "gray", "gray-3d", "gray-vector", "hybrid", "navigation-3d", "navigation-dark-3d", "oceans", "osm", "osm-3d", "satellite", "streets", "streets-3d", "streets-dark-3d", "streets-navigation-vector", "streets-night-vector", "streets-relief-vector", "streets-vector", "terrain", "topo", "topo-3d", "topo-vector"];
 
+
+    // Fetch facilities data when component mounts
+    useEffect(() => {
+        const loadFacilities = async () => {
+            try {
+                setLoadingFacilities(true);
+                const data = await fetchFacilities();
+                setFacilities(data);
+                setLoadingFacilities(false);
+            } catch (error) {
+                console.error("Error loading facilities:", error);
+                setMapError("Failed to load healthcare facilities");
+                setLoadingFacilities(false);
+            }
+        };
+
+        loadFacilities();
+        console.log("facilities", facilities);
+
+    }, []);
 
     // Function to toggle between 2D and 3D views
     const toggleViewMode = () => {
@@ -115,6 +139,14 @@ const MapComponent = () => {
     // Thay đổi loại bệnh hiển thị
     const changeDisease = (value) => {
         setSelectedDisease(value);
+    };
+
+    // Toggle facility visibility
+    const toggleFacilities = (checked) => {
+        setShowFacilities(checked);
+        if (facilitiesLayerRef.current) {
+            facilitiesLayerRef.current.visible = checked;
+        }
     };
 
     // Tính màu sắc dựa trên số ca bệnh
@@ -171,7 +203,69 @@ const MapComponent = () => {
         return colorScale[level] || colorScale[0];
     };
 
+    // Function to add facilities to the map
+    const addFacilitiesToMap = (layer) => {
+        if (!layer || facilities.length === 0) return;
 
+        // Clear existing facilities
+        layer.removeAll();
+
+        // Add each facility as a point
+        facilities.forEach(facility => {
+            // Create point geometry
+            const point = {
+                type: "point",
+                longitude: facility.coordinates[0],
+                latitude: facility.coordinates[1]
+            };
+
+            // Use a consistent style for all facilities
+            const pointSymbol = {
+                type: "simple-marker",
+                color: [65, 105, 225], // Royal Blue for all facilities
+                outline: {
+                    color: [255, 255, 255],
+                    width: 1
+                },
+                size: "10px"
+            };
+
+            // Create popup template
+            const popupTemplate = new PopupTemplate({
+                title: facility.name,
+                content: [
+                    {
+                        type: "text",
+                        text: `
+                            <div style="padding: 10px;">
+                                <div style="margin-bottom: 8px;"><strong>Mục đích:</strong> ${facility.purpose}</div>
+                                <div style="margin-bottom: 8px;"><strong>Chức năng:</strong> ${facility.function || "N/A"}</div>
+                                <div style="margin-bottom: 8px;"><strong>Địa chỉ:</strong> ${facility.location}</div>
+                                <div><strong>Tỉnh/Thành phố:</strong> ${facility.province}</div>
+                            </div>
+                        `
+                    }
+                ]
+            });
+
+            // Create the graphic
+            const pointGraphic = new Graphic({
+                geometry: point,
+                symbol: pointSymbol,
+                attributes: {
+                    name: facility.name,
+                    purpose: facility.purpose,
+                    function: facility.function,
+                    location: facility.location,
+                    province: facility.province
+                },
+                popupTemplate: popupTemplate
+            });
+
+            // Add to layer
+            layer.add(pointGraphic);
+        });
+    };
 
     useEffect(() => {
         if (mapDiv.current) {
@@ -193,6 +287,14 @@ const MapComponent = () => {
                 });
                 polygonsLayerRef.current = provincesLayer;
                 webmap.add(provincesLayer);
+
+                // Create and add facilities layer
+                const facilitiesLayer = new GraphicsLayer({
+                    title: "Healthcare Facilities",
+                    visible: showFacilities
+                });
+                facilitiesLayerRef.current = facilitiesLayer;
+                webmap.add(facilitiesLayer);
 
                 let view;
 
@@ -443,6 +545,11 @@ const MapComponent = () => {
                         toggleLabels(true);
                     }
 
+                    // Add healthcare facilities if enabled
+                    if (showFacilities && facilities.length > 0) {
+                        addFacilitiesToMap(facilitiesLayer);
+                    }
+
                 }, (error) => {
                     console.error("Map view failed to load:", error);
                     setMapError("Failed to load map view");
@@ -458,7 +565,7 @@ const MapComponent = () => {
                 setMapError("Failed to initialize map");
             }
         }
-    }, [is3D, currentBasemap, showLabels, selectedDataType, selectedDisease]); // Add dependencies for map initialization
+    }, [is3D, currentBasemap, showLabels, selectedDataType, selectedDisease, showFacilities, facilities]);
 
 
     return (
@@ -478,9 +585,16 @@ const MapComponent = () => {
                     </button>
                 </div>
             )}
+
+            {loadingFacilities && (
+                <div className="absolute top-5 right-5 z-50">
+                    <Spin tip="Đang tải dữ liệu..." />
+                </div>
+            )}
+
             <div className="mapDiv" ref={mapDiv} style={{ height: '100vh', width: "100%" }}></div>
 
-            <div className=" absolute bg-white top-5 left-12 rounded-lg shadow-lg p-1 z-10 flex items-center">
+            <div className="absolute bg-white top-5 left-12 rounded-lg shadow-lg p-1 z-10 flex items-center">
                 <div className="flex flex-col">
                     <div className="text-xs font-semibold ml-2 mb-1">Loại dữ liệu</div>
                     <Select
@@ -515,6 +629,17 @@ const MapComponent = () => {
                 </div>
             </div>
 
+            {/* Healthcare facilities toggle */}
+            <div className="absolute bg-white top-5 right-12 rounded-lg shadow-lg p-3 z-10">
+                <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium mr-3">Cơ sở y tế</span>
+                    <Switch
+                        checked={showFacilities}
+                        onChange={toggleFacilities}
+                        loading={loadingFacilities}
+                    />
+                </div>
+            </div>
 
             {/* Controls with Ant Design Select for basemap */}
             <div className="absolute bottom-6 left-6 z-10 flex space-x-4 p-2 rounded-lg items-end">
@@ -630,6 +755,17 @@ const MapComponent = () => {
                             </>
                         )}
                     </div>
+
+                    {/* Facility legend */}
+                    {showFacilities && (
+                        <div className="mt-3 pt-2 border-t">
+                            <div className="text-xs font-semibold mb-1">Cơ sở y tế</div>
+                            <div className="flex items-center my-1">
+                                <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: `rgb(65, 105, 225)` }}></div>
+                                <span className="text-xs">Các cơ sở y tế</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Toggle 2D/3D button */}
