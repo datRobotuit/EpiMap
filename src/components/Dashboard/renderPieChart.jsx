@@ -1,28 +1,31 @@
-import { Pie } from '@ant-design/plots';
+import { Pie } from '@ant-design/charts';
 import { Card } from 'antd';
 
 const renderPieChart = (data, angleField, colorField, title, colors) => {
     const config = {
+        appendPadding: 10,
         data,
         angleField,
         colorField,
         color: colors,
         radius: 0.8,
-        label: {
-            type: 'outer',
-            content: '{name}: {percentage}',
-        },
+        // label: {
+        //     type: 'outer',
+        //     formatter: (datum) => {
+        //         return `${datum[colorField]}: ${(datum[angleField] / data.reduce((sum, item) => sum + item[angleField], 0) * 100).toFixed(1)}%`;
+        //     },
+        // },
         tooltip: {
-            formatter: (datum) => {
-                return { name: datum[colorField], value: datum[angleField] };
-            },
+            // formatter: (datum) => {
+            //     return { name: datum[colorField] };
+            // },
         },
         interactions: [
             {
                 type: 'element-active',
             },
         ],
-        height: 200,
+        height: 250,
         autoFit: true,
         legend: {
             layout: 'horizontal',

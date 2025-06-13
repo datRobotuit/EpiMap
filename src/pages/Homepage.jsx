@@ -28,9 +28,11 @@ export default function Homepage() {
             <DashboardToggleButton isOpen={dashboardOpen} onToggle={toggleDashboard} />
             <button
                 onClick={handleClick}
-                className="absolute top-4 right-10 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow"
+                className="absolute top-1 right-2 bg-white hover:bg-white-700 text-blue-700 font-bold py-1 px-3 rounded shadow flex items-center gap-2 transition-colors duration-300"
             >
                 Chuyển sang Admin
+                <img src="/Epimap.png" alt="EpiMap" className="w-10 h-10" />
+
             </button>
         </div>
     );

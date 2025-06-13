@@ -1,4 +1,4 @@
-import { Column } from '@ant-design/plots';
+import { Column } from '@ant-design/charts';
 import { Typography } from 'antd';
 const { Title } = Typography;
 

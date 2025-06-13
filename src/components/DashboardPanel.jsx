@@ -174,7 +174,7 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
     };
     return (
         <div
-            className={`fixed top-0 right-0 h-[90vh] mt-10 w-[30%] z-10 mr-2 transition-transform duration-300 ease-in-out backdrop-blur-md bg-white/80 shadow-xl border-l border-white/20 rounded-l-xl ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+            className={`fixed top-2 right-0 h-[90vh] mt-12 w-[25%] z-10 mr-2 transition-transform duration-300 ease-in-out backdrop-blur-md bg-white/80 shadow-xl border-l border-white/20 rounded-l-xl ${isOpen ? "translate-x-0" : "translate-x-full"}`}
         >
             <div className="flex justify-between items-center p-4 border-b border-white/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
                 <div className="flex items-center">
@@ -243,15 +243,15 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
                 ]}
             />
 
-            <div className="overflow-y-auto scrollbar-thin mb-5 scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ height: "calc(100% - 140px)" }}>
+            <div className="overflow-y-auto scrollbar-thin mb-[25px] scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ height: "calc(100% - 175px)" }}>
                 {activeTab === "overview" && renderOverviewTab()}
                 {activeTab === "provinces" && renderProvincesTab()}
                 {activeTab === "demographics" && renderDemographicsTab()}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-3 text-center text-xs text-gray-500 border-t border-white/30 bg-white/50 backdrop-blur-sm">
+            <div className="absolute bottom-0 left-0 right-0 pt-1 text-center text-xs text-gray-500 rounded-b-lg border-t border-white/30 bg-white/50 backdrop-blur-sm  ">
                 <p>Dữ liệu mẫu - Cập nhật lần cuối: 11/06/2025</p>
-                <p className="mt-1 text-blue-500 hover:underline cursor-pointer">Xem nguồn dữ liệu</p>
+                <p className=" text-blue-500 hover:underline cursor-pointer">Xem nguồn dữ liệu</p>
             </div>
         </div>
     );

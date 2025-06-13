@@ -64,7 +64,7 @@ const renderDemographicsTab = () => {
                             genderData,
                             'count',
                             'gender',
-                            'Phân bố theo giới tính',
+                            'Thống kê giới tính',
                             ['#3b82f6', '#ec4899']
                         )}
                     </div>

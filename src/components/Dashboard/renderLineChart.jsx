@@ -1,6 +1,5 @@
-import React from 'react';
+import { Line } from '@ant-design/charts';
 import { Card } from 'antd';
-import { Line } from '@ant-design/plots';
 
 const renderLineChart = (data, xField, yField, title) => {
     const config = {
