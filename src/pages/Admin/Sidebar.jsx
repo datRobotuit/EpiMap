@@ -73,7 +73,7 @@ export default function AdminSidebar() {
     >
       <div>
         <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-100">
-          <img src="/vite.svg" alt="EpiMap" className="w-9 h-9" />
+          <img src="/Epimap.png" alt="EpiMap" className="w-24 h-24" />
           <span
             className="font-extrabold text-xl text-primary tracking-wide"
             style={{ color: "#1976d2" }}
