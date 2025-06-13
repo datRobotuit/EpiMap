@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Column } from '@ant-design/plots';
+import { Area, Column } from '@ant-design/plots';
 import 'antd/dist/reset.css';
 import axios from "axios";
 import { Card, Typography } from 'antd';
+import renderColumnChart from "../../components/Dashboard/renderColumnChart";
 const { Title, Text } = Typography;
 
 export default function AdminCharts({ onData, filters }) {
@@ -13,18 +14,24 @@ export default function AdminCharts({ onData, filters }) {
     setLoading(true);
     try {
       const params = {
-        fromDate: customFilters?.fromDate || filters.fromDate,
-        toDate: customFilters?.toDate || filters.toDate,
-        typeDisease: customFilters?.typeDisease || filters.typeDisease,
-        province: customFilters?.province || filters.province,
-        page: 1
+        type: customFilters?.typeDisease || filters.typeDisease,
+        startDate: customFilters?.fromDate || filters.fromDate,
+        endDate: customFilters?.toDate || filters.toDate,
       };
-      const res = await axios.post(
+      // Only add province if not 'all' or 'Toàn quốc'
+      const province = customFilters?.province || filters.province;
+      if (province && province !== 'all' && province !== 'Toàn quốc') {
+        params.province = province;
+      }
+      const res = await axios.get(
         "http://localhost:3000/admin/daily-report",
-        params,
-        { withCredentials: true }
+        {
+          params,
+          withCredentials: true
+        }
       );
-      const patients = res.data.data?.patients || [];
+      console.log('API response:', res.data);
+      const patients = res.data.data || [];
       setData(patients);
       if (onData) {
         onData({ patients });
@@ -53,82 +60,114 @@ export default function AdminCharts({ onData, filters }) {
   }, {});
   // Sắp xếp ngày tăng dần, lấy toàn bộ các ngày có dữ liệu
   const sortedDates = Object.keys(groupedData).sort((a, b) => new Date(a) - new Date(b));
-  const chartData = sortedDates.map(date => ({ date, value: groupedData[date] }));
+  const chartData = data
+    .filter(item => item.Date && typeof item.DailyInfection === 'number')
+    .map(item => ({
+      date: new Date(item.Date).toISOString().slice(0, 10),
+      value: item.DailyInfection,
+    }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+//   // Tính width động cho chart: mỗi cột ~60px, tối thiểu 400px
+//     console.log("Chart Data:", chartData);
+// const uniqueDates = new Set(chartData.map(d => d.date));
+// console.log('Total:', chartData.length, 'Unique:', uniqueDates.size);
+//   const chartWidth = Math.max(chartData.length * 60, 400);
+//   const maxValue = Math.max(...chartData.map(item => item.value || 0));
+//   const roundedMax = Math.ceil((maxValue + 5) / 10) * 10;
 
-  const config = {
-    data: chartData,
-    xField: 'date',
-    yField: 'value',
-    color: ({ value }) =>
-      value > 0
-        ? 'l(90) 0:#38bdf8 0.5:#6366f1 1:#a21caf' // gradient xanh dương-tím
-        : '#e0e7ef',
-    barWidthRatio: 0.25, // cột nhỏ lại
-    minColumnWidth: 8, // cột luôn nhỏ tối thiểu 8px
-    maxColumnWidth: 32, // cột không quá to khi ít dữ liệu
-    columnStyle: {
-      borderRadius: [10, 10, 0, 0],
-      shadowColor: '#6366f155',
-      shadowBlur: 12,
-    },
-    label: {
-      position: 'top',
-      style: {
-        fill: '#6366f1',
-        fontWeight: 700,
-        fontSize: 15,
-        textShadow: '0 1px 2px #fff',
-      },
-      formatter: (v) => (v.value > 0 ? v.value : ''),
-    },
-    xAxis: {
-      title: { text: 'Ngày', style: { fill: '#6366f1', fontWeight: 700, fontSize: 17 } },
-      label: { style: { fill: '#334155', fontWeight: 600, fontSize: 14 } },
-      grid: null,
-    },
-    yAxis: {
-      title: { text: 'Số ca mắc', style: { fill: '#6366f1', fontWeight: 700, fontSize: 17 } },
-      label: { style: { fill: '#334155', fontWeight: 600, fontSize: 14 } },
-      grid: { line: { style: { stroke: '#e0e7ef', lineDash: [4, 4] } } },
-    },
-    height: 360,
-    style: { background: 'linear-gradient(135deg,#f8fafc 60%,#e0e7ef 100%)', borderRadius: 20, padding: 32, minHeight: 260, boxShadow: '0 4px 24px #6366f122', border: '1px solid #e0e7ef' },
-    loading,
-    tooltip: {
-      showMarkers: false,
-      customContent: (title, items) => `<div style='font-weight:700;color:#6366f1;font-size:16px'>${title}</div><div style='margin-top:4px'>${items.map(i => `<span style='color:#6366f1;font-weight:600'>${i.data.value}</span> ca</div>`).join('')}</div>`
-    },
-    legend: false,
-    animation: { appear: { animation: 'scale-in-y', duration: 900 } },
-  };
+//   // Column chart config giống demo, hiển thị số ca mắc theo ngày
+//   const columnConfig = {
+//     data: chartData,
+//     xField: 'date',
+//     yField: 'value',
+//     color: ({ value }) => value > 0 ? 'l(90) 0:#38bdf8 0.5:#6366f1 1:#a21caf' : '#e0e7ef',
+//     barWidthRatio: 0.25,
+//     minColumnWidth: 8,
+//     maxColumnWidth: 32,
+//     autoFit: false, // Không tự fit theo container
+//     width: chartWidth,
+//     columnStyle: {
+//       borderRadius: [8, 8, 0, 0],
+//       shadowColor: '#6366f155',
+//       shadowBlur: 8,
+//     },
+//     label: {
+//       position: 'top',
+//       style: {
+//         fill: '#6366f1',
+//         fontWeight: 700,
+//         fontSize: 13,
+//         textShadow: '0 1px 2px #fff',
+//       },
+//       formatter: (v) => (v.value > 0 ? v.value : ''),
+//     },
+//     xAxis: {
+//       title: { text: 'Ngày', style: { fill: '#6366f1', fontWeight: 700, fontSize: 15 } },
+//       label: { style: { fill: '#334155', fontWeight: 600, fontSize: 12 } },
+//       grid: null,
+//       type: 'cat',
+//     },
+//     yAxis: {
+//       min: 0,
+//       max: roundedMax,
+//       tickInterval: 5,
+//       title: { text: 'Số ca mắc', style: { fill: '#6366f1', fontWeight: 700, fontSize: 15 } },
+//       label: { style: { fill: '#334155', fontWeight: 600, fontSize: 12 } },
+//       grid: { line: { style: { stroke: '#e0e7ef', lineDash: [4, 4] } } },
+//     },
+//     height: 340,
+//     style: { background: 'linear-gradient(135deg,#f8fafc 60%,#e0e7ef 100%)', borderRadius: 16, padding: 24, minHeight: 220, boxShadow: '0 2px 12px #6366f122', border: '1px solid #e0e7ef' },
+//     loading,
+//     tooltip: {
+//       showMarkers: false,
+//     },
+//     legend: false,
+//     animation: { appear: { animation: 'scale-in-y', duration: 800 } },
+//     onReady: ({ chart }) => {
+//       if (chartData.length > 0) {
+//         try {
+//           const { height } = chart._container.getBoundingClientRect();
+//           const tooltipItem = chartData[Math.floor(Math.random() * chartData.length)];
+//           chart.on(
+//             'afterrender',
+//             () => {
+//               chart.emit('tooltip:show', {
+//                 data: {
+//                   data: tooltipItem,
+//                 },
+//                 offsetY: height / 2 - 60,
+//               });
+//             },
+//             true,
+//           );
+//         } catch (e) {
+//           // ignore
+//         }
+//       }
+//     },
+//   };
 
   return (
     <Card
-      style={{
-        marginBottom: 24,
-        borderRadius: 20,
-        boxShadow: '0 4px 24px #6366f122',
-        background: 'linear-gradient(135deg,#f8fafc 60%,#e0e7ef 100%)',
-        border: '1px solid #e0e7ef',
-        padding: 0,
-      }}
+      bordered={false}
+      style={{ borderRadius: 16, overflow: 'hidden', position: 'relative' }}
       bodyStyle={{ padding: 0 }}
     >
-      <div style={{ padding: 32 }}>
-        <Title level={4} style={{ textAlign: 'center', color: '#6366f1', fontWeight: 800, letterSpacing: 1, marginBottom: 0 }}>
-          Biểu đồ số ca mắc theo ngày (30 ngày gần nhất)
-        </Title>
-        <Text type="secondary" style={{ display: 'block', textAlign: 'center', fontSize: 14, marginBottom: 18, fontStyle: 'italic' }}>
-          Số liệu được tổng hợp tự động từ hệ thống báo cáo dịch tễ. Mỗi cột là tổng số ca ghi nhận trong ngày tương ứng.
-        </Text>
-        {chartData.length === 0 ? (
-          <div style={{height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', borderRadius: 12, border: '1px solid #eee', minHeight: 260, boxShadow: '0 1px 4px #0001'}}>
-            <span style={{color: '#888', fontSize: 16}}>Không có dữ liệu</span>
-          </div>
-        ) : (
-          <Column {...config} />
-        )}
-      </div>
+      {chartData.length === 0 ? (
+        <div style={{height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', borderRadius: 12, border: '1px solid #eee', minHeight: 220, boxShadow: '0 1px 4px #0001'}}>
+          <span style={{color: '#888', fontSize: 16}}>Không có dữ liệu</span>
+        </div>
+      ) : (
+        <div style={{overflowX: 'auto', width: '100%'}}>
+         {renderColumnChart(
+                            chartData,
+                            'date',
+                            'value',
+                            'Tình trạng tiêm chủng (triệu người)',
+                            ['#3b82f6', '#10b981', '#6366f1']
+                        )}
+        </div>
+      )}
     </Card>
   );
 }
