@@ -1,8 +1,22 @@
 /**
- * Dữ liệu mô phỏng ca bệnh dịch theo tỉnh thành
+ * Dữ liệu bệnh dịch theo tỉnh thành
  */
 
-// Danh sách các loại bệnh mô phỏng
+import axios from 'axios';
+
+const fetchLatestReport = async (provinceName, diseaseType) => {
+    try {
+        const province = encodeURIComponent(provinceName);
+        const type = encodeURIComponent(diseaseType);
+
+    const response = await axios.get(`http://localhost:5000/api/report/latest/${province}/${type}`);
+    console.log('Latest Report:', response.data);
+  } catch (error) {
+      console.error('Error fetching report:', error.response?.data || error.message);
+    }
+};
+
+// Danh sách các loại bệnh
 const DISEASE_TYPES = [
     { id: "covid19", name: "Covid-19", color: [220, 53, 69, 0.7] },
     { id: "dengue", name: "Sốt xuất huyết", color: [255, 193, 7, 0.7] },
@@ -13,6 +27,9 @@ const DISEASE_TYPES = [
 
 // Sinh ngẫu nhiên số lượng ca bệnh cho từng tỉnh
 const generateMockData = () => {
+    // Test API
+    fetchLatestReport('An Giang', 'covid19');
+
     const allProvinces = [
         "ha_giang", "cao_bang", "lao_cai", "son_la", "lai_chau", "bac_kan", "lang_son",
         "tuyen_quang", "yen_bai", "thai_nguyen", "dien_bien", "phu_tho", "vinh_phuc",
@@ -26,6 +43,73 @@ const generateMockData = () => {
         "dong_thap", "hau_giang", "kien_giang", "long_an", "soc_trang", "tien_giang",
         "tra_vinh", "vinh_long"
     ];
+
+    // const allProvinces = [
+    //   "An Giang",
+    //   "Bà Rịa - Vũng Tàu",
+    //   "Bình Dương",
+    //   "Bình Phước",
+    //   "Bình Thuận",
+    //   "Bình Định",
+    //   "Bạc Liêu",
+    //   "Bắc Giang",
+    //   "Bắc Kạn",
+    //   "Bắc Ninh",
+    //   "Bến Tre",
+    //   "Cao Bằng",
+    //   "Cà Mau",
+    //   "Cần Thơ",
+    //   "Gia Lai",
+    //   "Hoà Bình",
+    //   "Hà Giang",
+    //   "Hà Nam",
+    //   "Hà Nội",
+    //   "Hà Tĩnh",
+    //   "Hòa Bình",
+    //   "Hưng Yên",
+    //   "Hải Dương",
+    //   "Hải Phòng",
+    //   "Hậu Giang",
+    //   "Hồ Chí Minh",
+    //   "Khánh Hòa",
+    //   "Kiên Giang",
+    //   "Kon Tum",
+    //   "Lai Châu",
+    //   "Long An",
+    //   "Lào Cai",
+    //   "Lâm Đồng",
+    //   "Lạng Sơn",
+    //   "Nam Định",
+    //   "Nghệ An",
+    //   "Ninh Bình",
+    //   "Ninh Thuận",
+    //   "Phú Thọ",
+    //   "Phú Yên",
+    //   "Quảng Bình",
+    //   "Quảng Nam",
+    //   "Quảng Ngãi",
+    //   "Quảng Ninh",
+    //   "Quảng Trị",
+    //   "Sóc Trăng",
+    //   "Sơn La",
+    //   "Thanh Hóa",
+    //   "Thái Bình",
+    //   "Thái Nguyên",
+    //   "Thừa Thiên Huế",
+    //   "Tiền Giang",
+    //   "Trà Vinh",
+    //   "Tuyên Quang",
+    //   "Tây Ninh",
+    //   "Vĩnh Long",
+    //   "Vĩnh Phúc",
+    //   "Yên Bái",
+    //   "Điện Biên",
+    //   "Đà Nẵng",
+    //   "Đắk Lắk",
+    //   "Đắk Nông",
+    //   "Đồng Nai",
+    //   "Đồng Tháp",
+    // ];
 
     // Dữ liệu mô phỏng ca bệnh
     const mockData = {};
