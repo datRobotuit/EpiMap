@@ -15,8 +15,8 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
     const diseaseOptions = [
         { value: "all", label: "Tất cả" },
         { value: "covid19", label: "COVID-19" },
-        { value: "dengue", label: "Sốt xuất huyết" },
-        { value: "influenza", label: "Cúm mùa" },
+        { value: "Sốt xuất huyết", label: "Sốt xuất huyết" },
+        { value: "Đậu mùa khỉ", label: "Đậu mùa khỉ" },
     ];
 
     const renderOverviewTab = () => {
@@ -31,8 +31,8 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
             // Modify the stats based on the selected disease
             const multiplier = {
                 "covid19": 0.2,  // Using the current data for COVID-19
-                "dengue": 0.5,   // 60% of COVID-19 cases for Dengue
-                "influenza": 0.3 // 80% of COVID-19 cases for Influenza
+                "Sốt xuất huyết": 0.5,   // 60% of COVID-19 cases for Dengue
+                "Đậu mùa khỉ": 0.3 // 80% of COVID-19 cases for Influenza
             }[diseaseFilter] || 1.0;
 
             filteredStats = {
