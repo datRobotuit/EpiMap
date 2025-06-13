@@ -1,7 +1,6 @@
 import { login } from "../../services/loginService";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +15,12 @@ export default function Login() {
     const res = await login(username, password);
     setLoading(false);
     if (res.success) {
-      // Không cần lưu token vào localStorage nếu backend dùng cookie
+      // Save token to localStorage if it exists in the response
+      if (res.token) {
+        localStorage.setItem('token', res.token);
+        sessionStorage.setItem('token', res.token);
+        Console.log("Token saved:", res.token);
+      }
       alert("Đăng nhập thành công!");
       navigate("/admin/home");
     } else {

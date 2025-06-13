@@ -18,7 +18,7 @@ export default function Homepage() {
             window.location.href = '/login';
         } else {
             // If logged in, redirect to admin page
-            window.location.href = '/admin';
+            window.location.href = '/admin/home';
         }
     };
     return (
