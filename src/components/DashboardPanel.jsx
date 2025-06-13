@@ -49,16 +49,16 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
             };
 
             // Modify the daily cases data
-            filteredDailyCases = dailyCases.map(day => ({
-                ...day,
-                cases: Math.floor(day.cases * multiplier)
-            }));
+            // filteredDailyCases = dailyCases.map(day => ({
+            //     ...day,
+            //     cases: Math.floor(day.TotalInfections * multiplier)
+            // }));
         }
 
         // Format data for charts
-        const dailyCasesData = filteredDailyCases.map(d => ({
-            date: d.date.substring(5), // Only show MM-DD
-            cases: d.cases
+        const dailyCasesData = dailyCases.map(d => ({
+            date: d.Date.substring(6, 10), // Only show MM-DD
+            cases: d.TotalInfections
         }));
 
         const vaccinationData = [

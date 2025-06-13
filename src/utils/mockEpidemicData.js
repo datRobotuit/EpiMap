@@ -28,7 +28,7 @@ const DISEASE_TYPES = [
 // Sinh ngẫu nhiên số lượng ca bệnh cho từng tỉnh
 const generateMockData = () => {
     // Test API
-    fetchLatestReport('An Giang', 'covid19');
+    // fetchLatestReport('An Giang', 'covid19');
 
     const allProvinces = [
         "ha_giang", "cao_bang", "lao_cai", "son_la", "lai_chau", "bac_kan", "lang_son",
