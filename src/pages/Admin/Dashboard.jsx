@@ -39,7 +39,8 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
               <select name="typeDisease" value={filters.typeDisease} onChange={handleFilterChange} style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', minWidth: 140, color: '#222' }}>
                 <option value="covid19">Covid 19</option>
-                <option value="cum">Cúm</option>
+                <option value="Sốt xuất huyết">Sốt xuất huyết</option>
+                <option value="Đậu mùa khỉ">Đậu mùa khỉ</option>
               </select>
               <span style={{ color: '#222', fontWeight: 500 }}>From</span>
               <input type="date" name="fromDate" value={filters.fromDate} onChange={handleFilterChange} style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc', minWidth: 140, color: '#222' }} />

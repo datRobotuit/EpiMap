@@ -1,6 +1,8 @@
 import epidemiologyApi from "../../apis/epidemiologyApi";
+import { getTraceByPatientId } from '../../apis/traceApi';
 import AddPatientModal from "./_components/AddPatientModal";
 import UpdatePatientModal from "./_components/UpdatePatientModal";
+import TraceModal from "./_components/TraceModal";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -51,6 +53,8 @@ export default function Epidemiology() {
   const [totalPages, setTotalPages] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
+  const [traceModalOpen, setTraceModalOpen] = useState(false);
+  const [traceData, setTraceData] = useState(null);
 
   // Lấy danh sách bệnh nhân
   const fetchPatients = async () => {
@@ -64,6 +68,7 @@ export default function Epidemiology() {
       const res = await epidemiologyApi.getPatients(params);
       setPatients(res.data);
       setTotalPages(res.totalPages);
+      console.log("Fetched patients:", res.data);
     } catch (err) {
       setPatients([]);
       setTotalPages(1);
@@ -132,6 +137,21 @@ export default function Epidemiology() {
     );
   };
 
+  // Truy vết bệnh nhân đầu tiên trong danh sách (hoặc bạn có thể chọn theo selectedRows)
+  const handleTrace = async () => {
+    if (!patients.length) return;
+    setLoading(true);
+    try {
+      const patientId = selectedRows[0];
+      const data = await getTraceByPatientId(patientId);
+      setTraceData(data);
+      setTraceModalOpen(true);
+    } catch (err) {
+      alert('Không thể lấy dữ liệu truy vết!');
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="w-[1200px] h-screen mx-auto px-0 flex flex-col gap-6 py-5 font-text">
       {/* Header */}
@@ -174,14 +194,27 @@ export default function Epidemiology() {
             />
           </div>
         </div>
-        <Button
-          variant="contained"
-          className="bg-primary-gradient rounded-lg text-xs font-bold py-2 px-6 shadow-lg transition-transform"
-          startIcon={<AddIcon className="text-white" fontSize="small" />}
-          onClick={() => setIsAddModalOpen(true)}
-        >
-          Thêm ca mới
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outlined"
+            className={`rounded-lg text-xs font-bold py-2 px-6 mr-2 shadow-lg transition-transform border-blue-500 ${
+              selectedRows.length !== 1 ? "bg-gray-200 text-gray-400" : "text-blue-700"
+            }`}
+            style={{ marginRight: 8, background: selectedRows.length !== 1 ? "#f3f4f6" : "#e0f2fe" }}
+            disabled={selectedRows.length !== 1}
+            onClick={handleTrace}
+          >
+            Truy vết
+          </Button>
+          <Button
+            variant="contained"
+            className="bg-primary-gradient rounded-lg text-xs font-bold py-2 px-6 shadow-lg transition-transform"
+            startIcon={<AddIcon className="text-white" fontSize="small" />}
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            Thêm ca mới
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -333,6 +366,12 @@ export default function Epidemiology() {
         />
       </div>
 
+      {/* Modal truy vết */}
+      <TraceModal
+        open={traceModalOpen}
+        onClose={() => setTraceModalOpen(false)}
+        traceData={traceData}
+      />
       {/* Modal thêm bệnh nhân */}
       <AddPatientModal
         isOpen={isAddModalOpen}
