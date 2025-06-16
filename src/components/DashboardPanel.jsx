@@ -1,11 +1,10 @@
 import { Alert, Select, Spin, Tabs, Typography } from 'antd';
 import { useEffect, useState } from "react";
-import { fetchDiseaseTotals, fetchDiseaseTypes, fetchRecentDiseaseData, fetchTopAffectedAreas } from '../services/apiService';
+import { fetchDiseaseTotals, fetchDiseaseTypes, fetchRecentDiseaseData } from '../services/apiService';
 import { dailyCases, nationalStats } from '../utils/province-stats';
-import renderColumnChart from './Dashboard/renderColumnChart';
 import renderDemographicsTab from './Dashboard/renderDemographicsTab';
-import renderProvincesTab from './Dashboard/renderProvinceTab';
 import renderLineChart from './Dashboard/renderLineChart';
+import renderProvincesTab from './Dashboard/renderProvinceTab';
 const { Title, Text } = Typography;
 
 const DashboardPanel = ({ isOpen, onToggle }) => {
@@ -18,7 +17,6 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
         totals: null,
         recentData: [],
     });
-    const [provinces, setProvinces] = useState([]);
 
     // Fetch disease types on component mount
     useEffect(() => {
@@ -48,21 +46,6 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
 
         fetchDiseaseTypeOptions();
     }, []);
-    
-        useEffect(() => {
-            const loadProvinceData = async () => {
-                try {
-                    const data = await fetchTopAffectedAreas(diseaseFilter);
-                    setProvinces(data);
-                    console.log("Province data loaded:", data);
-                } catch (error) {
-                    console.error("Error loading province data:", error);
-                    // Fallback to static data if API fails
-                }
-            };
-            
-            loadProvinceData();
-        }, [diseaseFilter]);
 
     // Fetch disease data when filter changes
     useEffect(() => {
@@ -97,21 +80,32 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
     }, [diseaseFilter]);
 
     const renderOverviewTab = () => {
+        if (isLoading) {
+            return (
+                <div className="flex justify-center items-center h-64">
+                    <Spin size="large" tip="Đang tải dữ liệu..." />
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <Alert
+                    message="Lỗi"
+                    description={error}
+                    type="error"
+                    showIcon
+                    className="m-5"
+                />
+            );
+        }
 
         let filteredStats = { ...nationalStats };
         let filteredDailyCases = [...dailyCases];
 
-        // Options for disease filter
-        const apiData = diseaseData.totals || {};
-
-        // Simulating different data for different disease types
-        if (diseaseFilter !== "all") {
-            // Modify the stats based on the selected disease
-            const multiplier = {
-                "covid19": 0.2,  // Using the current data for COVID-19
-                "Sốt xuất huyết": 0.5,   // 60% of COVID-19 cases for Dengue
-                "Đậu mùa khỉ": 0.3 // 80% of COVID-19 cases for Influenza
-            }[diseaseFilter] || 1.0;
+        // Use API data if available and a specific disease is selected
+        if (diseaseFilter !== "all" && diseaseData.totals) {
+            const apiData = diseaseData.totals;
 
             filteredStats = {
                 totalCases: apiData.TotalInfections || 0,
@@ -128,18 +122,48 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
                 })).reverse(); // Reverse to show oldest to newest
             }
         }
+        // } else {
+        //     // If "all" is selected or API data not available, simulate different data
+        //     const multiplier = {
+        //         "covid19": 0.2,
+        //         "Sốt xuất huyết": 0.5,
+        //         "Đậu mùa khỉ": 0.3
+        //     }[diseaseFilter] || 1.0;
 
+        //     filteredStats = {
+        //         ...nationalStats,
+        //         totalCases: Math.floor(nationalStats.totalCases * multiplier),
+        //         activeCases: Math.floor(nationalStats.activeCases * multiplier),
+        //         recovered: Math.floor(nationalStats.recovered * multiplier),
+        //         deaths: Math.floor(nationalStats.deaths * multiplier),
+        //         vaccinated: {
+        //             firstDose: nationalStats.vaccinated.firstDose * multiplier,
+        //             secondDose: nationalStats.vaccinated.secondDose * multiplier,
+        //             booster: nationalStats.vaccinated.booster * multiplier,
+        //         }
+        //     };
+
+        //     filteredDailyCases = dailyCases.map(day => ({
+        //         ...day,
+        //         cases: Math.floor(day.cases * multiplier)
+        //     }));
+        // }
 
         // Format data for charts
-        const dailyCasesData = dailyCases.map(d => ({
-            date: d.Date.substring(6, 10), // Only show MM-DD
-            cases: d.TotalInfections
+        const dailyCasesData = filteredDailyCases.map(d => ({
+            date: d.date, // Only show MM-DD
+            cases: d.cases
         }));
+
 
 
         const selectedDiseaseName = diseaseFilter !== "all"
             ? diseaseOptions.find(opt => opt.value === diseaseFilter)?.label
             : null;
+
+        const lastUpdatedDate = diseaseData.totals?.Date
+            ? new Date(diseaseData.totals.Date).toLocaleDateString('vi-VN')
+            : "11/06/2025";
 
         return (
             <div className="p-5">
@@ -221,16 +245,6 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
                         {renderLineChart(dailyCasesData, 'date', 'cases', 'Diễn biến ca nhiễm')}
                     </div>
                 </div>
-
-                <div className="mb-6 bg-white/70 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100">
-                    <div className="flex items-center mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                        </svg>
-                        <Title level={5} style={{ margin: 0 }}>Tình trạng tiêm chủng {selectedDiseaseName && `- ${selectedDiseaseName}`}</Title>
-                    </div>
-                </div>
-
             </div>
         );
     };
@@ -238,38 +252,24 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
         <div
             className={`fixed top-2 right-0 h-[90vh] mt-12 w-[25%] z-10 mr-2 transition-transform duration-300 ease-in-out backdrop-blur-md bg-white/80 shadow-xl border-l border-white/20 rounded-l-xl ${isOpen ? "translate-x-0" : "translate-x-full"}`}
         >
-            <div className="sticky top-0 z-20  rounded-tl-xl rounded-tr-xl">
-                <div className="flex justify-between items-center p-4 border-b border-white/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
-                    <div className="flex items-center">
-                        <div className="w-8 h-8 mr-2 bg-blue-500 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <Title level={3} style={{ margin: 0 }}>Dịch bệnh Việt Nam</Title>
+            <div className="flex justify-between items-center p-4 border-b border-white/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+                <div className="flex items-center">
+                    <div className="w-8 h-8 mr-2 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                     </div>
-                    <div className="flex items-center">
-                        <button
-                            onClick={onToggle}
-                            className="p-2 rounded-full hover:bg-white/30 transition-all hover:rotate-90 duration-300"
-                            title="Đóng bảng điều khiển"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+                    <Title level={3} style={{ margin: 0 }}>Dịch bệnh Việt Nam</Title>
                 </div>
-                <Select
-                    value={diseaseFilter}
-                    onChange={setDiseaseFilter}
-                    options={diseaseOptions}
-                    style={{ width: 120, height: 50, margin: '10px' }}
-                    size="small"
-                    className="mr-2"
-                    placeholder="Chọn bệnh"
-                    dropdownStyle={{ borderRadius: '8px' }}
-                />
+                <button
+                    onClick={onToggle}
+                    className="p-2 rounded-full hover:bg-white/30 transition-all hover:rotate-90 duration-300"
+                    title="Đóng bảng điều khiển"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
 
             <Tabs
@@ -321,13 +321,13 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
 
             <div className="overflow-y-auto scrollbar-thin mb-[25px] scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ height: "calc(100% - 175px)" }}>
                 {activeTab === "overview" && renderOverviewTab()}
-                {activeTab === "provinces" && renderProvincesTab(diseaseFilter, provinces)}
+                {activeTab === "provinces" && renderProvincesTab()}
                 {activeTab === "demographics" && renderDemographicsTab()}
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 pt-1 text-center text-xs text-gray-500 rounded-b-lg border-t border-white/30 bg-white/50 backdrop-blur-sm  ">
-                <p>Dữ liệu mẫu - Cập nhật lần cuối: 11/06/2025</p>
-                <p className=" text-blue-500 hover:underline cursor-pointer">Xem nguồn dữ liệu</p>
+            <div className="absolute bottom-0 left-0 right-0 pt-1 text-center text-xs text-gray-500 rounded-b-lg border-t border-white/30 bg-white/50 backdrop-blur-sm">
+                <p>Dữ liệu được cập nhật theo API - Cập nhật lần cuối: {diseaseData.totals?.Date ? new Date(diseaseData.totals.Date).toLocaleDateString('vi-VN') : "11/06/2025"}</p>
+                <p className="text-blue-500 hover:underline cursor-pointer">Xem nguồn dữ liệu</p>
             </div>
         </div>
     );
