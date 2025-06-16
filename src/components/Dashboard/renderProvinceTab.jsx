@@ -15,13 +15,13 @@ export default function renderProvincesTab (diseaseFilter) {
     const top5Provinces = provincesData;
 
     const provinceCasesData = top5Provinces.map(province => ({
-        province: province.province,
-        cases: province.cases
+        province: province.Province,
+        cases: province.TotalInfections
     }));
 
     const provinceActiveData = top5Provinces.map(province => ({
-        province: province.province,
-        active: province.active
+        province: province.Province,
+        active: province.TotalInfections
     }));
 
     return (
@@ -97,11 +97,11 @@ export default function renderProvincesTab (diseaseFilter) {
                         <tbody className="divide-y divide-gray-200">
                             {provincesData.map((province, index) => (
                                 <tr key={index} className={index % 2 === 0 ? "bg-white hover:bg-blue-50 transition-colors" : "bg-gray-50 hover:bg-blue-50 transition-colors"}>
-                                    <td className="py-2 px-3 text-sm font-medium text-gray-900">{province.province}</td>
-                                    <td className="py-2 px-3 text-sm text-gray-700">{province.cases.toLocaleString()}</td>
-                                    <td className="py-2 px-3 text-sm text-orange-500 font-medium">{province.active.toLocaleString()}</td>
-                                    <td className="py-2 px-3 text-sm text-green-500 font-medium">{province.recovered.toLocaleString()}</td>
-                                    <td className="py-2 px-3 text-sm text-red-500 font-medium">{province.deaths.toLocaleString()}</td>
+                                    <td className="py-2 px-3 text-sm font-medium text-gray-900">{province.Province}</td>
+                                    <td className="py-2 px-3 text-sm text-gray-700">{province.TotalInfections.toLocaleString()}</td>
+                                    <td className="py-2 px-3 text-sm text-orange-500 font-medium">{province.TotalTreatment.toLocaleString()}</td>
+                                    <td className="py-2 px-3 text-sm text-green-500 font-medium">{province.TotalRecover.toLocaleString()}</td>
+                                    <td className="py-2 px-3 text-sm text-red-500 font-medium">{province.TotalDeath.toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
