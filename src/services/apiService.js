@@ -58,3 +58,14 @@ export const fetchFacilities = async () => {
         throw error;
     }
 };
+// Get top 5 affected areas for a disease
+export const fetchTopAffectedAreas = async (diseaseType) => {
+    try {
+        const type = encodeURIComponent(diseaseType);
+        const response = await axios.get(`${API_BASE_URL}/report/top5/${type}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching top affected areas:', error);
+        throw error;
+    }
+};

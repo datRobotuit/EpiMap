@@ -627,7 +627,6 @@ const MapComponent = () => {
                         />
                     </div>
                 </div>
-
                 {/* Healthcare facilities toggle */}
                 <div className="rounded-lg p-3 z-10">
                     <div className="flex items-center justify-between">
@@ -641,7 +640,7 @@ const MapComponent = () => {
                 </div>
             </div>
 
-
+            
 
             {/* Controls with Ant Design Select for basemap */}
             <div className="absolute bottom-6 left-6 z-10 flex space-x-4 p-2 rounded-lg items-end">

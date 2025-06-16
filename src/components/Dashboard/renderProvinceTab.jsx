@@ -2,12 +2,17 @@ import { Typography } from 'antd';
 import { provincesData } from '../../utils/province-stats';
 import renderColumnChart from './renderColumnChart';
 import renderPieChart from './renderPieChart';
+import { useEffect, useState } from 'react';
+import { fetchTopAffectedAreas } from '../../services/apiService';
 const { Title } = Typography;
 
 
-export default function renderProvincesTab () {
+export default function renderProvincesTab (diseaseFilter) {
+
+
+
     // Format data for charts
-    const top5Provinces = provincesData.slice(0, 5);
+    const top5Provinces = provincesData;
 
     const provinceCasesData = top5Provinces.map(province => ({
         province: province.Province,
