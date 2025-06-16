@@ -1,31 +1,30 @@
 # EpiMap
 
-EpiMap là một ứng dụng web hiện đại được phát triển bằng React và Vite, được thiết kế để tạo ra trải nghiệm người dùng mượt mà và hiệu quả.
+EpiMap là ứng dụng web quản lý và trực quan hóa dữ liệu dịch tễ học, hỗ trợ theo dõi, phân tích và truy vết ca bệnh theo thời gian thực. Ứng dụng được xây dựng với React 19, Vite 4, sử dụng các thư viện UI hiện đại và hỗ trợ quản lý trạng thái, routing, cũng như tích hợp API linh hoạt.
 
-## Tính năng
+## Tính năng nổi bật
 
-- Giao diện người dùng hiện đại và thân thiện
-- Được xây dựng với React 19 và Vite 4
-- Hỗ trợ đầy đủ các tính năng routing với React Router
-- Quản lý state với Zustand
-- Styling linh hoạt với TailwindCSS và các thư viện UI như Material UI và Ant Design
+- Giao diện trực quan, hiện đại, tối ưu cho desktop và thiết bị di động
+- Quản lý danh sách bệnh nhân: thêm, sửa, xóa, lọc, tìm kiếm, xuất Excel
+- Truy vết ca bệnh theo từng bệnh nhân
+- Thống kê, biểu đồ dịch tễ học theo tỉnh/thành, loại bệnh, thời gian
+- Bảng điều khiển tổng quan (dashboard) và bản đồ tương tác
+- Phân quyền đăng nhập cho Admin
+- Styling linh hoạt với TailwindCSS, Material UI, Ant Design
 - Tương tác API dễ dàng với Axios
 
 ## Bắt đầu
 
 ### Yêu cầu
 
-- Node.js (phiên bản 16 trở lên)
+- Node.js >= 16
 - npm hoặc yarn
 
 ### Cài đặt
 
 ```bash
-# Clone repository
 git clone https://github.com/yourusername/EpiMap.git
 cd EpiMap
-
-# Cài đặt dependencies
 npm install
 ```
 
@@ -46,29 +45,35 @@ npm run preview
 
 ```
 EpiMap/
-├── public/          # Static assets
-├── src/             # Source code
-│   ├── assets/      # Images, fonts, etc.
-│   ├── App.jsx      # Main application component
-│   ├── App.css      # Main application styles
-│   ├── main.jsx     # Application entry point
-│   └── index.css    # Global styles
-├── index.html       # HTML template
-├── package.json     # Project dependencies and scripts
-└── vite.config.js   # Vite configuration
+├── public/                # Static assets (images, icons, ...)
+├── src/
+│   ├── apis/              # API service modules
+│   ├── assets/            # Ảnh, logo, svg
+│   ├── components/        # Các component dùng chung (DashboardPanel, MapComponent, ...)
+│   ├── helpers/           # Hàm tiện ích
+│   ├── layouts/           # Layouts (AdminLayout, ...)
+│   ├── pages/             # Các trang chính (Homepage, Admin, Epidemiology, LogIn, ...)
+│   ├── routes/            # Định nghĩa route
+│   ├── services/          # Service logic (login, ...)
+│   ├── utils/             # Tiện ích, mock data
+│   ├── App.jsx            # App root component
+│   ├── main.jsx           # Entry point
+│   └── index.css          # Global styles
+├── index.html             # HTML template
+├── package.json           # Project dependencies & scripts
+├── vite.config.js         # Vite config
+├── tailwind.config.js     # Tailwind config
+└── README.md
 ```
 
 ## Công nghệ sử dụng
 
 - [React](https://react.dev/) - Thư viện UI
-- [Vite](https://vite.dev/) - Build tool và dev server
+- [Vite](https://vite.dev/) - Build tool & dev server
 - [React Router](https://reactrouter.com/) - Routing
 - [Zustand](https://zustand-demo.pmnd.rs/) - State management
 - [TailwindCSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [Material UI](https://mui.com/) - Component library
-- [Ant Design](https://ant.design/) - Component library
+- [Material UI](https://mui.com/) & [Ant Design](https://ant.design/) - UI component libraries
 - [Axios](https://axios-http.com/) - HTTP client
-
-## License
-
-MIT
+- [xlsx](https://github.com/SheetJS/sheetjs) - Xuất file Excel
+- [file-saver](https://github.com/eligrey/FileSaver.js/) - Lưu file phía client
