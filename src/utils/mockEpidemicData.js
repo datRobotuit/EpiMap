@@ -37,7 +37,7 @@ const generateMockData = () => {
 
     // Dữ liệu mô phỏng ca bệnh
     const mockData = {};
-
+    
     // Các biến thống kê chung
     let totalCases = 0;
     let totalActive = 0;
