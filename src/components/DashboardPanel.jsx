@@ -102,6 +102,7 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
         let filteredDailyCases = [...dailyCases];
 
         // Options for disease filter
+        const apiData = diseaseData.totals || {};
 
         // Simulating different data for different disease types
         if (diseaseFilter !== "all") {
@@ -135,11 +136,6 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
             cases: d.TotalInfections
         }));
 
-        const vaccinationData = [
-            { category: "Mũi 1", value: filteredStats.vaccinated.firstDose / 1000000 },
-            { category: "Mũi 2", value: filteredStats.vaccinated.secondDose / 1000000 },
-            { category: "Mũi bổ sung", value: filteredStats.vaccinated.booster / 1000000 }
-        ];
 
         const selectedDiseaseName = diseaseFilter !== "all"
             ? diseaseOptions.find(opt => opt.value === diseaseFilter)?.label
@@ -232,15 +228,6 @@ const DashboardPanel = ({ isOpen, onToggle }) => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                         </svg>
                         <Title level={5} style={{ margin: 0 }}>Tình trạng tiêm chủng {selectedDiseaseName && `- ${selectedDiseaseName}`}</Title>
-                    </div>
-                    <div className="bg-white rounded-lg overflow-hidden">
-                        {renderColumnChart(
-                            vaccinationData,
-                            'category',
-                            'value',
-                            'Tình trạng tiêm chủng (triệu người)',
-                            ['#3b82f6', '#10b981', '#6366f1']
-                        )}
                     </div>
                 </div>
 
